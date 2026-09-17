@@ -39,10 +39,31 @@ function getEmpresas(value) {
     return empresas;
 }
 
+function getDatas(value) {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    if (!Array.isArray(value) || value.length === 0) {
+        throw new AppError("O campo datas deve conter pelo menos uma data.", 400, "INVALID_DATES");
+    }
+
+    return value.map((data) => (
+        formatarDataParaSap(getSingleBodyValue(data), "datas")
+    ));
+}
+
 function validateExtratoBancario(req, res, next) {
     try {
         const body = req.body || {};
         const empresas = getEmpresas(body.empresa);
+        const datas = getDatas(body.datas);
+
+        if (datas) {
+            req.extratoBancarioQuery = { empresas, datas };
+            return next();
+        }
+
         const dataInicial = formatarDataParaSap(getSingleBodyValue(body.dataInicial), "dataInicial");
         const dataFinal = formatarDataParaSap(getSingleBodyValue(body.dataFinal), "dataFinal");
 

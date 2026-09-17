@@ -57,6 +57,47 @@ test("monta o filtro de extrato bancario e encerra a sessao SAP", async (t) => {
     );
 });
 
+test("monta o filtro de extrato bancario para datas especificas", async (t) => {
+    const originalFetch = globalThis.fetch;
+    const calls = [];
+
+    globalThis.fetch = async (input, options = {}) => {
+        const url = input.toString();
+        calls.push({ url, method: options.method || "GET" });
+
+        if (url.endsWith("/Login")) {
+            return new Response(JSON.stringify({ SessionId: "sessao-teste" }), {
+                status: 200,
+                headers: { "content-type": "application/json" }
+            });
+        }
+
+        if (url.endsWith("/Logout")) {
+            return new Response(null, { status: 204 });
+        }
+
+        return new Response(JSON.stringify({ value: [] }), {
+            status: 200,
+            headers: { "content-type": "application/json" }
+        });
+    };
+
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    await getExtratosBancarios({
+        empresas: ["EBC"],
+        datas: ["2026-04-01", "2026-04-02", "2026-04-05"]
+    });
+
+    const queryUrl = new URL(calls[1].url);
+    assert.equal(
+        queryUrl.searchParams.get("$filter"),
+        "(endswith(AccountName,'EBC')) and (DueDate eq '2026-04-01' or DueDate eq '2026-04-02' or DueDate eq '2026-04-05')"
+    );
+});
+
 test("consulta todas as páginas de filiais e encerra a sessão SAP", async (t) => {
     const originalFetch = globalThis.fetch;
     const calls = [];

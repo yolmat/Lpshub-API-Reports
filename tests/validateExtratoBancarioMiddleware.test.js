@@ -35,3 +35,25 @@ test("rejeita intervalo de datas invalido", async () => {
 
     assert.equal(error.code, "INVALID_DATE_RANGE");
 });
+
+test("aceita datas especificas sem exigir intervalo", async () => {
+    const { error, filtros } = await validar({
+        empresa: ["EBC"],
+        datas: ["2026-04-01", "2026-04-02", "2026-04-05"]
+    });
+
+    assert.equal(error, undefined);
+    assert.deepEqual(filtros, {
+        empresas: ["EBC"],
+        datas: ["2026-04-01", "2026-04-02", "2026-04-05"]
+    });
+});
+
+test("rejeita lista de datas vazia", async () => {
+    const { error } = await validar({
+        empresa: ["EBC"],
+        datas: []
+    });
+
+    assert.equal(error.code, "INVALID_DATES");
+});

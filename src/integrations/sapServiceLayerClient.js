@@ -250,16 +250,18 @@ function escapeOdataString(value) {
     return value.replaceAll("'", "''");
 }
 
-async function getExtratosBancarios({ empresas, dataInicial, dataFinal }) {
+async function getExtratosBancarios({ empresas, dataInicial, dataFinal, datas }) {
     const { url } = getConfig();
     const pageUrl = new URL("BankPages", getApiBaseUrl(url));
     const accountFilters = empresas.map((empresa) => (
         `endswith(AccountName,'${escapeOdataString(empresa)}')`
     ));
+    const dateFilter = datas
+        ? `(${datas.map((data) => `DueDate eq '${data}'`).join(" or ")})`
+        : `DueDate ge '${dataInicial}' and DueDate le '${dataFinal}'`;
     const filter = [
         `(${accountFilters.join(" or ")})`,
-        `DueDate ge '${dataInicial}'`,
-        `DueDate le '${dataFinal}'`
+        dateFilter
     ].join(" and ");
 
     pageUrl.searchParams.set("$filter", filter);
