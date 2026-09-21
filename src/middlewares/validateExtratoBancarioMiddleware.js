@@ -6,6 +6,13 @@ function getSingleBodyValue(value) {
     return typeof value === "string" ? value.trim() : "";
 }
 
+function isDatasEmpty(value) {
+    return value === undefined
+        || value === null
+        || (typeof value === "string" && !value.trim())
+        || (Array.isArray(value) && value.length === 0);
+}
+
 function formatarDataParaSap(value, fieldName) {
     const match = value.match(DATE_PATTERN);
 
@@ -25,7 +32,7 @@ function formatarDataParaSap(value, fieldName) {
 
 function getEmpresas(value) {
     if (!Array.isArray(value) || value.length === 0) {
-        throw new AppError("O campo empresa deve conter pelo menos uma empresa.", 400, "INVALID_COMPANIES");
+        throw new AppError("O campo EMPRESA deve conter pelo menos uma filial.", 400, "INVALID_COMPANIES");
     }
 
     const empresas = value.map((empresa) => (
@@ -33,23 +40,23 @@ function getEmpresas(value) {
     ));
 
     if (empresas.some((empresa) => !empresa)) {
-        throw new AppError("O campo empresa deve conter somente textos preenchidos.", 400, "INVALID_COMPANIES");
+        throw new AppError("O campo EMPRESA deve conter somente textos preenchidos.", 400, "INVALID_COMPANIES");
     }
 
     return empresas;
 }
 
 function getDatas(value) {
-    if (value === undefined) {
+    if (isDatasEmpty(value)) {
         return undefined;
     }
 
     if (!Array.isArray(value) || value.length === 0) {
-        throw new AppError("O campo datas deve conter pelo menos uma data.", 400, "INVALID_DATES");
+        throw new AppError("O campo DATAS deve conter pelo menos uma data.", 400, "INVALID_DATES");
     }
 
     return value.map((data) => (
-        formatarDataParaSap(getSingleBodyValue(data), "datas")
+        formatarDataParaSap(getSingleBodyValue(data), "DATAS")
     ));
 }
 
@@ -58,20 +65,38 @@ function validateExtratoBancario(req, res, next) {
         const body = req.body || {};
         const empresas = getEmpresas(body.empresa);
         const datas = getDatas(body.datas);
+        const dataInicial = getSingleBodyValue(body.dataInicial);
+        const dataFinal = getSingleBodyValue(body.dataFinal);
 
         if (datas) {
             req.extratoBancarioQuery = { empresas, datas };
             return next();
         }
 
-        const dataInicial = formatarDataParaSap(getSingleBodyValue(body.dataInicial), "dataInicial");
-        const dataFinal = formatarDataParaSap(getSingleBodyValue(body.dataFinal), "dataFinal");
-
-        if (dataInicial > dataFinal) {
-            throw new AppError("A dataInicial nao pode ser posterior a dataFinal.", 400, "INVALID_DATE_RANGE");
+        if (!dataInicial && !dataFinal) {
+            throw new AppError("O campo DATAS deve conter pelo menos uma data.", 400, "INVALID_DATES");
         }
 
-        req.extratoBancarioQuery = { empresas, dataInicial, dataFinal };
+        if (!dataInicial) {
+            throw new AppError("O campo DATAINICIAL deve conter pelo menos uma data.", 400, "INVALID_DATE");
+        }
+
+        if (!dataFinal) {
+            throw new AppError("O campo DATAFINAL deve conter pelo menos uma data.", 400, "INVALID_DATE");
+        }
+
+        const dataInicialFormatada = formatarDataParaSap(dataInicial, "DATAINICIAL");
+        const dataFinalFormatada = formatarDataParaSap(dataFinal, "DATAFINAL");
+
+        if (dataInicialFormatada > dataFinalFormatada) {
+            throw new AppError("O campo DATAINICIAL nao pode ser posterior ao campo DATAFINAL.", 400, "INVALID_DATE_RANGE");
+        }
+
+        req.extratoBancarioQuery = {
+            empresas,
+            dataInicial: dataInicialFormatada,
+            dataFinal: dataFinalFormatada
+        };
         return next();
     } catch (error) {
         return next(error);
