@@ -124,7 +124,7 @@ test("registra usuário USER, autentica e redefine a senha padrão", async () =>
     );
 });
 
-test("atualiza a atividade da sessão e invalida após uma hora de inatividade", async () => {
+test("mantém a sessão ativa com uso contínuo e invalida após duas horas de inatividade", async () => {
     const userRepository = createUserRepository();
     let currentDate = new Date("2026-09-30T12:00:00.000Z");
     const service = createAuthService({
@@ -144,11 +144,15 @@ test("atualiza a atividade da sessão e invalida após uma hora de inatividade",
     });
     const { sid } = verifyAuthToken(token, securityConfig.jwtSecret);
 
-    currentDate = new Date("2026-09-30T12:30:00.000Z");
+    currentDate = new Date("2026-09-30T13:30:00.000Z");
     assert.equal((await service.getAuthenticatedUser(user.id, sid)).id, user.id);
     assert.equal(userRepository.getSession(sid).lastActivityAt.toISOString(), currentDate.toISOString());
 
-    currentDate = new Date("2026-09-30T13:30:00.000Z");
+    currentDate = new Date("2026-09-30T15:29:00.000Z");
+    assert.equal((await service.getAuthenticatedUser(user.id, sid)).id, user.id);
+    assert.equal(userRepository.getSession(sid).lastActivityAt.toISOString(), currentDate.toISOString());
+
+    currentDate = new Date("2026-09-30T17:29:00.000Z");
     assert.equal(await service.getAuthenticatedUser(user.id, sid), null);
     assert.equal(userRepository.getSession(sid), null);
 });

@@ -1,6 +1,6 @@
 const AUTH_COOKIE_NAME = "lpshub_access_token";
 const AUTH_TOKEN_EXPIRATION_SECONDS = 8 * 60 * 60;
-const AUTH_SESSION_INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
+const AUTH_SESSION_INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 
 function getAuthCookieConfig(env = process.env) {
     const isProduction = env.NODE_ENV === "production";

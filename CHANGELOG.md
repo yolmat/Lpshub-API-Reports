@@ -1,5 +1,6 @@
 ## Não publicado
 
+- Alterado o timeout por inatividade da sessão para duas horas, com renovação da atividade em requisições autenticadas e válidas.
 - Adicionado timeout de uma hora por inatividade para sessões autenticadas, com invalidação no servidor e remoção do cookie.
 - Atualizada a política do cookie de autenticação para `HttpOnly`, `SameSite=Strict`, `Path=/` e `Secure` em produção.
 - Adicionado rate limiting global de 50 requisições por minuto, com limites de 15 para login e cadastro e 5 para redefinição de senha.
