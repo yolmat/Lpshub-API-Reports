@@ -1,0 +1,17 @@
+services:
+  lpshub:
+    image: postgres:16-alpine
+    container_name: postgres-lpshubReports
+    ports:
+      - "5438:5432"
+
+    environment:
+      POSTGRES_USER: lpshubReports
+      POSTGRES_PASSWORD: lpshub@1209
+      POSTGRES_DB: lpshubReports
+
+    volumes:
+      - lpshubReports:/var/lib/postgresql/data
+
+volumes:
+  lpshubReports:
