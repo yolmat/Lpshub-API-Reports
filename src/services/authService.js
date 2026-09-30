@@ -1,4 +1,9 @@
-import { AUTH_TOKEN_EXPIRATION_SECONDS, getAuthSecurityConfig } from "../config/auth.js";
+import {
+    AUTH_SESSION_INACTIVITY_TIMEOUT_MS,
+    AUTH_TOKEN_EXPIRATION_SECONDS,
+    getAuthSecurityConfig
+} from "../config/auth.js";
+import { randomUUID } from "node:crypto";
 import * as defaultUserRepository from "../repository/userRepository.js";
 import AppError from "../utils/AppError.js";
 import { createAuthToken } from "../utils/jwtUtils.js";
@@ -52,7 +57,9 @@ function toPublicUser(user) {
 
 function createAuthService({
     userRepository = defaultUserRepository,
-    getSecurityConfig = getAuthSecurityConfig
+    getSecurityConfig = getAuthSecurityConfig,
+    createSessionId = randomUUID,
+    now = () => new Date()
 } = {}) {
     function getJwtSecret() {
         const { jwtSecret } = getSecurityConfig();
@@ -112,7 +119,17 @@ function createAuthService({
             );
         }
 
-        const token = createAuthToken(user, getJwtSecret(), AUTH_TOKEN_EXPIRATION_SECONDS);
+        const session = await userRepository.createUserSession({
+            id: createSessionId(),
+            userId: user.id,
+            lastActivityAt: now()
+        });
+        const token = createAuthToken(
+            user,
+            getJwtSecret(),
+            AUTH_TOKEN_EXPIRATION_SECONDS,
+            session.id
+        );
 
         return { token, user: toPublicUser(user) };
     }
@@ -136,10 +153,26 @@ function createAuthService({
         return toPublicUser(updatedUser);
     }
 
-    async function getAuthenticatedUser(id) {
-        const user = await userRepository.findUserById(id);
+    async function getAuthenticatedUser(id, sessionId) {
+        const [user, session] = await Promise.all([
+            userRepository.findUserById(id),
+            userRepository.findUserSessionById(sessionId)
+        ]);
 
-        return user && user.status ? user : null;
+        if (!user || !user.status || !session || session.userId !== user.id) {
+            return null;
+        }
+
+        const currentDate = now();
+        const elapsedMilliseconds = currentDate.getTime() - session.lastActivityAt.getTime();
+
+        if (elapsedMilliseconds >= AUTH_SESSION_INACTIVITY_TIMEOUT_MS) {
+            await userRepository.deleteUserSession(session.id);
+            return null;
+        }
+
+        await userRepository.updateUserSessionActivity(session.id, currentDate);
+        return user;
     }
 
     return {

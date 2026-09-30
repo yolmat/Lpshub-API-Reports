@@ -12,8 +12,17 @@ const securityConfig = {
 
 function createUserRepository() {
     const users = [];
+    const sessions = [];
 
     return {
+        async createUserSession(data) {
+            const session = {
+                createdAt: new Date(),
+                ...data
+            };
+            sessions.push(session);
+            return session;
+        },
         async createUser(data) {
             const user = {
                 id: `user-${users.length + 1}`,
@@ -33,12 +42,31 @@ function createUserRepository() {
         async findUserByLoginAndEmail(login, email) {
             return users.find((user) => user.login === login && user.email === email) || null;
         },
+        async findUserSessionById(id) {
+            return sessions.find((session) => session.id === id) || null;
+        },
+        async updateUserSessionActivity(id, lastActivityAt) {
+            const session = sessions.find((item) => item.id === id);
+
+            session.lastActivityAt = lastActivityAt;
+            return session;
+        },
         async updateUserPassword(id, passwordHash) {
             const user = users.find((item) => item.id === id);
 
             user.passwordHash = passwordHash;
             user.updatedAt = new Date();
             return user;
+        },
+        async deleteUserSession(id) {
+            const index = sessions.findIndex((session) => session.id === id);
+
+            if (index >= 0) {
+                sessions.splice(index, 1);
+            }
+        },
+        getSession(id) {
+            return sessions.find((session) => session.id === id) || null;
         }
     };
 }
@@ -78,6 +106,7 @@ test("registra usuário USER, autentica e redefine a senha padrão", async () =>
 
     assert.equal(tokenPayload.sub, registeredUser.id);
     assert.equal(tokenPayload.role, "USER");
+    assert.equal(typeof tokenPayload.sid, "string");
 
     await service.resetUserPassword({
         login: "msaraiva",
@@ -93,4 +122,33 @@ test("registra usuário USER, autentica e redefine a senha padrão", async () =>
         service.loginUser({ login: "msaraiva", senha: "senha-inicial" }),
         { code: "INVALID_CREDENTIALS" }
     );
+});
+
+test("atualiza a atividade da sessão e invalida após uma hora de inatividade", async () => {
+    const userRepository = createUserRepository();
+    let currentDate = new Date("2026-09-30T12:00:00.000Z");
+    const service = createAuthService({
+        userRepository,
+        getSecurityConfig: () => securityConfig,
+        createSessionId: () => "sessao-de-teste",
+        now: () => currentDate
+    });
+    const user = await service.registerUser({
+        login: "mteste",
+        email: "mteste@teste.com.br",
+        senha: "senha-inicial"
+    });
+    const { token } = await service.loginUser({
+        login: "mteste",
+        senha: "senha-inicial"
+    });
+    const { sid } = verifyAuthToken(token, securityConfig.jwtSecret);
+
+    currentDate = new Date("2026-09-30T12:30:00.000Z");
+    assert.equal((await service.getAuthenticatedUser(user.id, sid)).id, user.id);
+    assert.equal(userRepository.getSession(sid).lastActivityAt.toISOString(), currentDate.toISOString());
+
+    currentDate = new Date("2026-09-30T13:30:00.000Z");
+    assert.equal(await service.getAuthenticatedUser(user.id, sid), null);
+    assert.equal(userRepository.getSession(sid), null);
 });

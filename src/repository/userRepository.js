@@ -23,10 +23,33 @@ function updateUserPassword(id, passwordHash) {
     });
 }
 
+function createUserSession(data) {
+    return prisma.userSession.create({ data });
+}
+
+function findUserSessionById(id) {
+    return prisma.userSession.findUnique({ where: { id } });
+}
+
+function updateUserSessionActivity(id, lastActivityAt) {
+    return prisma.userSession.update({
+        where: { id },
+        data: { lastActivityAt }
+    });
+}
+
+function deleteUserSession(id) {
+    return prisma.userSession.delete({ where: { id } });
+}
+
 export {
+    createUserSession,
     createUser,
+    deleteUserSession,
     findUserById,
     findUserByLogin,
     findUserByLoginAndEmail,
+    findUserSessionById,
+    updateUserSessionActivity,
     updateUserPassword
 };

@@ -1,4 +1,4 @@
-import { AUTH_COOKIE_NAME, getAuthSecurityConfig } from "../config/auth.js";
+import { AUTH_COOKIE_NAME, getAuthCookieConfig, getAuthSecurityConfig } from "../config/auth.js";
 import authService from "../services/authService.js";
 import AppError from "../utils/AppError.js";
 import { verifyAuthToken } from "../utils/jwtUtils.js";
@@ -24,6 +24,13 @@ function getCookieValue(cookieHeader, name) {
     }
 }
 
+function clearAuthCookie(res) {
+    const { name, options } = getAuthCookieConfig();
+    const { maxAge, ...clearOptions } = options;
+
+    res.clearCookie(name, clearOptions);
+}
+
 async function authenticate(req, res, next) {
     try {
         const { jwtSecret } = getAuthSecurityConfig();
@@ -34,9 +41,10 @@ async function authenticate(req, res, next) {
             throw new AppError("Autenticação obrigatória.", 401, "UNAUTHENTICATED");
         }
 
-        const user = await authService.getAuthenticatedUser(payload.sub);
+        const user = await authService.getAuthenticatedUser(payload.sub, payload.sid);
 
         if (!user) {
+            clearAuthCookie(res);
             throw new AppError("Autenticação obrigatória.", 401, "UNAUTHENTICATED");
         }
 

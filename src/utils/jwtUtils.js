@@ -8,12 +8,13 @@ function sign(value, secret) {
     return createHmac("sha256", secret).update(value).digest("base64url");
 }
 
-function createAuthToken(user, secret, expirationSeconds) {
+function createAuthToken(user, secret, expirationSeconds, sessionId) {
     const issuedAt = Math.floor(Date.now() / 1000);
     const header = encode({ alg: "HS256", typ: "JWT" });
     const payload = encode({
         sub: user.id,
         role: user.role,
+        sid: sessionId,
         iat: issuedAt,
         exp: issuedAt + expirationSeconds
     });
@@ -48,6 +49,8 @@ function verifyAuthToken(token, secret) {
             parsedHeader.alg !== "HS256"
             || parsedHeader.typ !== "JWT"
             || typeof parsedPayload.sub !== "string"
+            || typeof parsedPayload.sid !== "string"
+            || !parsedPayload.sid
             || !Number.isSafeInteger(parsedPayload.exp)
             || parsedPayload.exp <= Math.floor(Date.now() / 1000)
         ) {
