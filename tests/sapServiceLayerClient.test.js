@@ -57,6 +57,52 @@ test("monta o filtro de extrato bancario e encerra a sessao SAP", async (t) => {
     );
 });
 
+test("remove credenciais e dados de sessao antes de retornar dados do SAP", async (t) => {
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = async (input) => {
+        const url = input.toString();
+
+        if (url.endsWith("/Login")) {
+            return new Response(JSON.stringify({ SessionId: "sessao-interna" }), {
+                status: 200,
+                headers: { "content-type": "application/json" }
+            });
+        }
+
+        if (url.endsWith("/Logout")) {
+            return new Response(null, { status: 204 });
+        }
+
+        return new Response(JSON.stringify({
+            value: [{
+                IDSAP: 1,
+                Password: "nao-expor",
+                UserName: "usuario-sap",
+                SessionId: "sessao-interna",
+                dados: {
+                    Token: "token-interno",
+                    Sigla: "LITA"
+                }
+            }]
+        }), {
+            status: 200,
+            headers: { "content-type": "application/json" }
+        });
+    };
+
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    const filiais = await getAllFiliais();
+
+    assert.deepEqual(filiais, [{
+        IDSAP: 1,
+        dados: { Sigla: "LITA" }
+    }]);
+});
+
 test("monta o filtro de extrato bancario para datas especificas", async (t) => {
     const originalFetch = globalThis.fetch;
     const calls = [];

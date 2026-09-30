@@ -2,6 +2,39 @@ import { sapServiceLayerConfig } from "../config/env.js";
 import AppError from "../utils/AppError.js";
 
 const SAP_API_PATH = "/b1s/v1/";
+const SENSITIVE_SAP_FIELDS = new Set([
+    "accesstoken",
+    "apikey",
+    "api_key",
+    "authorization",
+    "b1session",
+    "companydb",
+    "cookie",
+    "password",
+    "refreshtoken",
+    "secret",
+    "session",
+    "sessionid",
+    "set-cookie",
+    "token",
+    "username"
+]);
+
+function sanitizeSapData(value) {
+    if (Array.isArray(value)) {
+        return value.map(sanitizeSapData);
+    }
+
+    if (!value || typeof value !== "object") {
+        return value;
+    }
+
+    return Object.fromEntries(
+        Object.entries(value)
+            .filter(([key]) => !SENSITIVE_SAP_FIELDS.has(key.toLowerCase()))
+            .map(([key, fieldValue]) => [key, sanitizeSapData(fieldValue)])
+    );
+}
 
 function getConfig() {
     const { url, login, timeoutMs } = sapServiceLayerConfig;
@@ -161,7 +194,7 @@ async function getAllPages(initialPageUrl, cookie, resourceName) {
             );
         }
 
-        records.push(...body.value);
+        records.push(...sanitizeSapData(body.value));
         pageUrl = body["odata.nextLink"]
             ? getNextPageUrl(body["odata.nextLink"], url)
             : null;
@@ -225,7 +258,7 @@ async function getAllFiliais() {
                 );
             }
 
-            filiais.push(...body.value);
+            filiais.push(...sanitizeSapData(body.value));
             pageUrl = body["odata.nextLink"]
                 ? getNextPageUrl(body["odata.nextLink"], url)
                 : null;

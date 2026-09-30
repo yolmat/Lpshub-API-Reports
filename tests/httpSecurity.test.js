@@ -4,6 +4,7 @@ import http from "node:http";
 import test from "node:test";
 
 import { createApp } from "../src/app.js";
+import { AUTH_COOKIE_NAME, getAuthCookieConfig } from "../src/config/auth.js";
 import { getHttpSecurityConfig } from "../src/config/env.js";
 
 async function request(app, path, options) {
@@ -30,6 +31,20 @@ test("normaliza somente origens HTTP e HTTPS configuradas para CORS", () => {
         "https://app.exemplo.com",
         "http://localhost:3000"
     ]);
+});
+
+test("configura o cookie de autenticação com restrições seguras", () => {
+    const developmentCookie = getAuthCookieConfig({ NODE_ENV: "development" });
+    const productionCookie = getAuthCookieConfig({ NODE_ENV: "production" });
+
+    assert.equal(developmentCookie.name, AUTH_COOKIE_NAME);
+    assert.deepEqual(developmentCookie.options, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        path: "/"
+    });
+    assert.equal(productionCookie.options.secure, true);
 });
 
 test("adiciona cabeçalhos de segurança e libera CORS apenas para origem autorizada", async () => {
