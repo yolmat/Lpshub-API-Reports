@@ -1,9 +1,10 @@
 import { Router } from "express";
 
-import { login, logout, register, resetPassword } from "../controllers/authController.js";
+import { deactivateUser, login, logout, register, resetPassword } from "../controllers/authController.js";
 import { authenticate, requireAdmin } from "../middlewares/authMiddleware.js";
 import validateRequest from "../middlewares/validateRequestMiddleware.js";
 import {
+    authDeactivateUserBodySchema,
     authLoginBodySchema,
     authLogoutBodySchema,
     authPasswordResetBodySchema,
@@ -36,6 +37,13 @@ function createAuthRoutes(rateLimiters) {
         authenticate,
         requireAdmin,
         resetPassword
+    );
+    router.post(
+        "/auth/deactivate",
+        validateRequest({ headers: protectedRouteHeadersSchema, body: authDeactivateUserBodySchema }),
+        authenticate,
+        requireAdmin,
+        deactivateUser
     );
 
     return router;

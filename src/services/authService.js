@@ -170,13 +170,30 @@ function createAuthService({
         await userRepository.deleteUserSession(sessionId);
     }
 
+    async function deactivateUser({ login }) {
+        const user = await userRepository.findUserByLogin(getLogin(login));
+
+        if (!user) {
+            throw new AppError("Usuário não encontrado.", 404, "USER_NOT_FOUND");
+        }
+
+        const deactivatedUser = await userRepository.deactivateUserAndDeleteSessions(user.id);
+
+        return toPublicUser(deactivatedUser);
+    }
+
     async function getAuthenticatedUser(id, sessionId) {
         const [user, session] = await Promise.all([
             userRepository.findUserById(id),
             userRepository.findUserSessionById(sessionId)
         ]);
 
-        if (!user || !user.status || !session || session.userId !== user.id) {
+        if (!user || !session || session.userId !== user.id) {
+            return null;
+        }
+
+        if (!user.status) {
+            await userRepository.deleteUserSession(session.id);
             return null;
         }
 
@@ -198,6 +215,7 @@ function createAuthService({
 
     return {
         getAuthenticatedUser,
+        deactivateUser,
         loginUser,
         logoutUser,
         registerUser,

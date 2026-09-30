@@ -65,6 +65,17 @@ function createUserRepository() {
                 sessions.splice(index, 1);
             }
         },
+        async deactivateUserAndDeleteSessions(id) {
+            const user = users.find((item) => item.id === id);
+
+            user.status = false;
+            for (let index = sessions.length - 1; index >= 0; index -= 1) {
+                if (sessions[index].userId === id) {
+                    sessions.splice(index, 1);
+                }
+            }
+            return user;
+        },
         getSession(id) {
             return sessions.find((session) => session.id === id) || null;
         }
@@ -221,4 +232,49 @@ test("encerra somente a sessão do usuário autenticado", async () => {
         sessionId: sid
     });
     assert.equal(userRepository.getSession(sid), null);
+});
+
+test("desativa o usuário, encerra suas sessões e rejeita usuário inativo", async () => {
+    const userRepository = createUserRepository();
+    const service = createAuthService({
+        userRepository,
+        getSecurityConfig: () => securityConfig,
+        createSessionId: () => "sessao-desativacao"
+    });
+    const user = await service.registerUser({
+        login: "mdesativar",
+        email: "mdesativar@teste.com.br",
+        senha: "senha-inicial"
+    });
+    const { token } = await service.loginUser({
+        login: "mdesativar",
+        senha: "senha-inicial"
+    });
+    const { sid } = verifyAuthToken(token, securityConfig.jwtSecret);
+
+    const deactivatedUser = await service.deactivateUser({ login: "mdesativar" });
+
+    assert.equal(deactivatedUser.status, false);
+    assert.equal(userRepository.getSession(sid), null);
+
+    await assert.rejects(
+        service.loginUser({ login: "mdesativar", senha: "senha-inicial" }),
+        { code: "INVALID_CREDENTIALS" }
+    );
+
+    const activeUser = await service.registerUser({
+        login: "mstatus",
+        email: "mstatus@teste.com.br",
+        senha: "senha-inicial"
+    });
+    const { token: activeToken } = await service.loginUser({
+        login: "mstatus",
+        senha: "senha-inicial"
+    });
+    const { sid: activeSessionId } = verifyAuthToken(activeToken, securityConfig.jwtSecret);
+    const storedActiveUser = await userRepository.findUserByLogin("mstatus");
+
+    storedActiveUser.status = false;
+    assert.equal(await service.getAuthenticatedUser(activeUser.id, activeSessionId), null);
+    assert.equal(userRepository.getSession(activeSessionId), null);
 });

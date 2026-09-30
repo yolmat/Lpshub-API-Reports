@@ -50,4 +50,20 @@ async function logout(req, res, next) {
     }
 }
 
-export { login, logout, register, resetPassword };
+async function deactivateUser(req, res, next) {
+    try {
+        const user = await authService.deactivateUser(req.validated.body);
+
+        if (user.id === req.authenticatedUser.id) {
+            const { name, options } = getAuthCookieClearConfig();
+
+            res.clearCookie(name, options);
+        }
+
+        return res.status(200).json({ success: true, data: user });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+export { deactivateUser, login, logout, register, resetPassword };

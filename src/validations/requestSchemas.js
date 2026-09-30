@@ -46,6 +46,10 @@ const authLogoutBodySchema = z.object({
     login: loginSchema
 }).strict();
 
+const authDeactivateUserBodySchema = z.object({
+    login: loginSchema
+}).strict();
+
 const protectedRouteHeadersSchema = z.object({
     cookie: z.string().min(1, "O cookie de autenticação é obrigatório.").refine(
         (value) => value.split(";").some((item) => item.trim().startsWith(`${AUTH_COOKIE_NAME}=`)),
@@ -102,6 +106,7 @@ const extratoBancarioBodySchema = z.object({
 });
 
 export {
+    authDeactivateUserBodySchema,
     authLoginBodySchema,
     authLogoutBodySchema,
     authPasswordResetBodySchema,

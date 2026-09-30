@@ -42,9 +42,22 @@ function deleteUserSession(id) {
     return prisma.userSession.delete({ where: { id } });
 }
 
+function deactivateUserAndDeleteSessions(id) {
+    return prisma.$transaction(async (transaction) => {
+        const user = await transaction.user.update({
+            where: { id },
+            data: { status: false }
+        });
+
+        await transaction.userSession.deleteMany({ where: { userId: id } });
+        return user;
+    });
+}
+
 export {
     createUserSession,
     createUser,
+    deactivateUserAndDeleteSessions,
     deleteUserSession,
     findUserById,
     findUserByLogin,
