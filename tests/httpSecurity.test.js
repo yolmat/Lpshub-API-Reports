@@ -6,6 +6,11 @@ import test from "node:test";
 import { createApp } from "../src/app.js";
 import { AUTH_COOKIE_NAME, getAuthCookieConfig } from "../src/config/auth.js";
 import { getHttpSecurityConfig } from "../src/config/env.js";
+import {
+    AUTH_RATE_LIMIT,
+    GLOBAL_RATE_LIMIT,
+    PASSWORD_RESET_RATE_LIMIT
+} from "../src/config/rateLimit.js";
 
 async function request(app, path, options) {
     const server = http.createServer(app);
@@ -118,4 +123,71 @@ test("retorna os detalhes do Zod ao receber uma requisição inválida", async (
     assert.equal(response.status, 400);
     assert.equal(payload.error.code, "INVALID_REQUEST");
     assert.deepEqual(payload.error.details.map((detail) => detail.path), ["login", "senha"]);
+});
+
+test("aplica o limite global de 50 requisições por minuto", async () => {
+    const app = createApp({
+        isProduction: false,
+        allowedCorsOrigins: [],
+        trustProxy: false
+    });
+
+    for (let index = 0; index < GLOBAL_RATE_LIMIT; index += 1) {
+        const response = await request(app, "/health");
+        assert.equal(response.status, 200);
+    }
+
+    const blockedResponse = await request(app, "/health");
+    assert.equal(blockedResponse.status, 429);
+    assert.equal((await blockedResponse.json()).error.code, "RATE_LIMIT_EXCEEDED");
+});
+
+test("limita login e cadastro a 15 requisições por minuto por rota", async () => {
+    const app = createApp({
+        isProduction: false,
+        allowedCorsOrigins: [],
+        trustProxy: false
+    });
+    const options = {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({})
+    };
+
+    for (let index = 0; index < AUTH_RATE_LIMIT; index += 1) {
+        const response = await request(app, "/api/v1/auth/login", options);
+        assert.equal(response.status, 400);
+    }
+
+    const blockedResponse = await request(app, "/api/v1/auth/login", options);
+    assert.equal(blockedResponse.status, 429);
+
+    for (let index = 0; index < AUTH_RATE_LIMIT; index += 1) {
+        const response = await request(app, "/api/v1/auth/register", options);
+        assert.equal(response.status, 400);
+    }
+
+    const blockedRegisterResponse = await request(app, "/api/v1/auth/register", options);
+    assert.equal(blockedRegisterResponse.status, 429);
+});
+
+test("limita redefinição de senha a 5 requisições por minuto", async () => {
+    const app = createApp({
+        isProduction: false,
+        allowedCorsOrigins: [],
+        trustProxy: false
+    });
+    const options = {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({})
+    };
+
+    for (let index = 0; index < PASSWORD_RESET_RATE_LIMIT; index += 1) {
+        const response = await request(app, "/api/v1/auth/password-reset", options);
+        assert.equal(response.status, 400);
+    }
+
+    const blockedResponse = await request(app, "/api/v1/auth/password-reset", options);
+    assert.equal(blockedResponse.status, 429);
 });

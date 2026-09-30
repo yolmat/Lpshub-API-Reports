@@ -10,22 +10,28 @@ import {
     protectedRouteHeadersSchema
 } from "../validations/requestSchemas.js";
 
-const router = Router();
+function createAuthRoutes(rateLimiters) {
+    const router = Router();
 
-router.post("/auth/login", validateRequest({ body: authLoginBodySchema }), login);
-router.post(
-    "/auth/register",
-    validateRequest({ headers: protectedRouteHeadersSchema, body: authRegisterBodySchema }),
-    authenticate,
-    requireAdmin,
-    register
-);
-router.post(
-    "/auth/password-reset",
-    validateRequest({ headers: protectedRouteHeadersSchema, body: authPasswordResetBodySchema }),
-    authenticate,
-    requireAdmin,
-    resetPassword
-);
+    router.post("/auth/login", rateLimiters.login, validateRequest({ body: authLoginBodySchema }), login);
+    router.post(
+        "/auth/register",
+        rateLimiters.register,
+        validateRequest({ headers: protectedRouteHeadersSchema, body: authRegisterBodySchema }),
+        authenticate,
+        requireAdmin,
+        register
+    );
+    router.post(
+        "/auth/password-reset",
+        rateLimiters.passwordReset,
+        validateRequest({ headers: protectedRouteHeadersSchema, body: authPasswordResetBodySchema }),
+        authenticate,
+        requireAdmin,
+        resetPassword
+    );
 
-export default router;
+    return router;
+}
+
+export default createAuthRoutes;

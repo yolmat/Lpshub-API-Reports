@@ -3,7 +3,8 @@ import cors from "cors";
 import helmet from "helmet";
 
 import { getHttpSecurityConfig } from "./config/env.js";
-import routes from "./routes/index.js";
+import { createRateLimiters } from "./config/rateLimit.js";
+import createRoutes from "./routes/index.js";
 import errorMiddleware from "./middlewares/errorMiddleware.js";
 import validateRequest from "./middlewares/validateRequestMiddleware.js";
 import { emptyObjectSchema } from "./validations/requestSchemas.js";
@@ -27,6 +28,7 @@ function requireHttps(req, res, next) {
 
 function createApp(httpSecurityConfig = getHttpSecurityConfig()) {
     const app = express();
+    const rateLimiters = createRateLimiters();
 
     app.disable("x-powered-by");
     app.set("trust proxy", httpSecurityConfig.trustProxy);
@@ -44,6 +46,8 @@ function createApp(httpSecurityConfig = getHttpSecurityConfig()) {
         app.use(requireHttps);
     }
 
+    app.use(rateLimiters.global);
+
     app.use(
         "/api/v1/extratos-bancarios",
         express.json({ limit: EXTRATOS_BANCARIOS_BODY_LIMIT })
@@ -55,7 +59,7 @@ function createApp(httpSecurityConfig = getHttpSecurityConfig()) {
         params: emptyObjectSchema
     }));
 
-    app.use("/api", routes);
+    app.use("/api", createRoutes(rateLimiters));
 
     app.get("/health", (req, res) => {
         res.status(200).json({
