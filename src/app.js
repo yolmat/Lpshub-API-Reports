@@ -7,6 +7,7 @@ import routes from "./routes/index.js";
 import errorMiddleware from "./middlewares/errorMiddleware.js";
 
 const EXTRATOS_BANCARIOS_BODY_LIMIT = "10kb";
+const AUTH_BODY_LIMIT = "2kb";
 
 function requireHttps(req, res, next) {
     if (req.secure) {
@@ -45,6 +46,7 @@ function createApp(httpSecurityConfig = getHttpSecurityConfig()) {
         "/api/v1/extratos-bancarios",
         express.json({ limit: EXTRATOS_BANCARIOS_BODY_LIMIT })
     );
+    app.use("/api/v1/auth", express.json({ limit: AUTH_BODY_LIMIT }));
 
     app.use("/api", routes);
 
@@ -63,4 +65,4 @@ function createApp(httpSecurityConfig = getHttpSecurityConfig()) {
 const app = createApp();
 
 export default app;
-export { createApp, EXTRATOS_BANCARIOS_BODY_LIMIT };
+export { AUTH_BODY_LIMIT, createApp, EXTRATOS_BANCARIOS_BODY_LIMIT };

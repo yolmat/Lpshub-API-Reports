@@ -42,7 +42,8 @@ test("configura o cookie de autenticação com restrições seguras", () => {
         httpOnly: true,
         secure: false,
         sameSite: "lax",
-        path: "/"
+        path: "/",
+        maxAge: 8 * 60 * 60 * 1000
     });
     assert.equal(productionCookie.options.secure, true);
 });

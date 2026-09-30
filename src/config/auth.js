@@ -1,4 +1,5 @@
 const AUTH_COOKIE_NAME = "lpshub_access_token";
+const AUTH_TOKEN_EXPIRATION_SECONDS = 8 * 60 * 60;
 
 function getAuthCookieConfig(env = process.env) {
     const isProduction = env.NODE_ENV === "production";
@@ -9,9 +10,22 @@ function getAuthCookieConfig(env = process.env) {
             httpOnly: true,
             secure: isProduction,
             sameSite: "lax",
-            path: "/"
+            path: "/",
+            maxAge: AUTH_TOKEN_EXPIRATION_SECONDS * 1000
         })
     });
 }
 
-export { AUTH_COOKIE_NAME, getAuthCookieConfig };
+function getAuthSecurityConfig(env = process.env) {
+    return Object.freeze({
+        jwtSecret: env.JWT_SECRET?.trim(),
+        passwordResetDefault: env.PASSWORD_RESET_DEFAULT
+    });
+}
+
+export {
+    AUTH_COOKIE_NAME,
+    AUTH_TOKEN_EXPIRATION_SECONDS,
+    getAuthCookieConfig,
+    getAuthSecurityConfig
+};
