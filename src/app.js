@@ -1,30 +1,66 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 
+import { getHttpSecurityConfig } from "./config/env.js";
 import routes from "./routes/index.js";
 import errorMiddleware from "./middlewares/errorMiddleware.js";
 
-const app = express();
+const EXTRATOS_BANCARIOS_BODY_LIMIT = "10kb";
 
-app.use(
-    cors({
-        origin: true,
-        credentials: true
-    })
-);
+function requireHttps(req, res, next) {
+    if (req.secure) {
+        return next();
+    }
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use("/api", routes);
-
-app.get("/health", (req, res) => {
-    res.status(200).json({
-        status: "ok",
-        message: "API online"
+    return res.status(403).json({
+        success: false,
+        error: {
+            code: "HTTPS_REQUIRED",
+            message: "A conexão HTTPS é obrigatória neste ambiente."
+        }
     });
-});
+}
 
-app.use(errorMiddleware);
+function createApp(httpSecurityConfig = getHttpSecurityConfig()) {
+    const app = express();
+
+    app.disable("x-powered-by");
+    app.set("trust proxy", httpSecurityConfig.trustProxy);
+    app.use(helmet());
+    app.use(cors({
+        credentials: true,
+        origin(origin, callback) {
+            callback(null, Boolean(
+                origin && httpSecurityConfig.allowedCorsOrigins.includes(origin)
+            ));
+        }
+    }));
+
+    if (httpSecurityConfig.isProduction) {
+        app.use(requireHttps);
+    }
+
+    app.use(
+        "/api/v1/extratos-bancarios",
+        express.json({ limit: EXTRATOS_BANCARIOS_BODY_LIMIT })
+    );
+
+    app.use("/api", routes);
+
+    app.get("/health", (req, res) => {
+        res.status(200).json({
+            status: "ok",
+            message: "API online"
+        });
+    });
+
+    app.use(errorMiddleware);
+
+    return app;
+}
+
+const app = createApp();
 
 export default app;
+export { createApp, EXTRATOS_BANCARIOS_BODY_LIMIT };

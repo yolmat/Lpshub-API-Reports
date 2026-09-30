@@ -26,4 +26,49 @@ const sapServiceLayerConfig = Object.freeze({
     timeoutMs: getTimeout()
 });
 
-export { sapServiceLayerConfig };
+function getAllowedCorsOrigins(value) {
+    if (!value) {
+        return [];
+    }
+
+    return [...new Set(value.split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+        .flatMap((origin) => {
+            try {
+                const url = new URL(origin);
+
+                const isOrigin = (url.protocol === "http:" || url.protocol === "https:")
+                    && url.pathname === "/"
+                    && !url.search
+                    && !url.hash
+                    && !url.username
+                    && !url.password;
+
+                return [isOrigin ? url.origin : null];
+            } catch {
+                return [];
+            }
+        })
+        .filter(Boolean))];
+}
+
+function getTrustProxy(value) {
+    const proxyCount = Number.parseInt(value, 10);
+
+    return Number.isSafeInteger(proxyCount) && proxyCount > 0
+        ? proxyCount
+        : false;
+}
+
+function getHttpSecurityConfig(env = process.env) {
+    return Object.freeze({
+        isProduction: env.NODE_ENV === "production",
+        allowedCorsOrigins: Object.freeze(
+            getAllowedCorsOrigins(env.CORS_ALLOWED_ORIGINS)
+        ),
+        trustProxy: getTrustProxy(env.TRUST_PROXY)
+    });
+}
+
+export { getHttpSecurityConfig, sapServiceLayerConfig };

@@ -1,5 +1,6 @@
 ## Não publicado
 
+- Adicionadas proteções HTTP com Helmet, HTTPS obrigatório em produção, CORS por lista de origens e limite de 10 KB para o body de extratos bancários.
 - Centralizada a configuração de conexão do SAP Business One Service Layer por variáveis de ambiente.
 - Migrado o código da aplicação de CommonJS para ECMAScript Modules.
 - Adicionada a rota `GET /api/v1/filiais` com integração paginada ao SAP Business One Service Layer.
