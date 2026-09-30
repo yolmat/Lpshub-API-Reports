@@ -1,5 +1,6 @@
 ## Não publicado
 
+- Adicionada validação de bodies, queries, params e headers necessários com Zod antes dos controllers.
 - Adicionadas rotas de autenticação, cadastro restrito a administradores e redefinição de senha com hash `scrypt` e salt aleatório.
 - Alterado o cadastro e a autenticação para utilizarem diretamente o login informado pelo cliente.
 - Adicionado o model `User` com papéis de administrador e usuário para autenticação e alinhada a geração do Prisma Client com a importação usada pela aplicação.

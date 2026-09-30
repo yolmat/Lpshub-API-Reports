@@ -5,6 +5,8 @@ import helmet from "helmet";
 import { getHttpSecurityConfig } from "./config/env.js";
 import routes from "./routes/index.js";
 import errorMiddleware from "./middlewares/errorMiddleware.js";
+import validateRequest from "./middlewares/validateRequestMiddleware.js";
+import { emptyObjectSchema } from "./validations/requestSchemas.js";
 
 const EXTRATOS_BANCARIOS_BODY_LIMIT = "10kb";
 const AUTH_BODY_LIMIT = "2kb";
@@ -47,6 +49,11 @@ function createApp(httpSecurityConfig = getHttpSecurityConfig()) {
         express.json({ limit: EXTRATOS_BANCARIOS_BODY_LIMIT })
     );
     app.use("/api/v1/auth", express.json({ limit: AUTH_BODY_LIMIT }));
+
+    app.use(validateRequest({
+        query: emptyObjectSchema,
+        params: emptyObjectSchema
+    }));
 
     app.use("/api", routes);
 

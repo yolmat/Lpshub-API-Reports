@@ -101,3 +101,21 @@ test("rejeita body maior que o limite da rota de extratos bancários", async () 
     assert.equal(response.status, 413);
     assert.equal((await response.json()).error.code, "PAYLOAD_TOO_LARGE");
 });
+
+test("retorna os detalhes do Zod ao receber uma requisição inválida", async () => {
+    const app = createApp({
+        isProduction: false,
+        allowedCorsOrigins: [],
+        trustProxy: false
+    });
+    const response = await request(app, "/api/v1/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ login: "" })
+    });
+    const payload = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.equal(payload.error.code, "INVALID_REQUEST");
+    assert.deepEqual(payload.error.details.map((detail) => detail.path), ["login", "senha"]);
+});

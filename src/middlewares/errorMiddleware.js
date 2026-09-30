@@ -30,13 +30,19 @@ function errorMiddleware(error, req, res, next) {
                 ? error.message
                 : "Ocorreu um erro interno ao processar a solicitação.";
 
-    return res.status(statusCode).json({
+    const errorResponse = {
         success: false,
         error: {
             code,
             message
         }
-    });
+    };
+
+    if (isAppError && error.details) {
+        errorResponse.error.details = error.details;
+    }
+
+    return res.status(statusCode).json(errorResponse);
 }
 
 export default errorMiddleware;
