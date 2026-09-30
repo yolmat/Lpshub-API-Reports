@@ -1,4 +1,8 @@
-import { AUTH_COOKIE_NAME, getAuthCookieConfig, getAuthSecurityConfig } from "../config/auth.js";
+import {
+    AUTH_COOKIE_NAME,
+    getAuthCookieClearConfig,
+    getAuthSecurityConfig
+} from "../config/auth.js";
 import authService from "../services/authService.js";
 import AppError from "../utils/AppError.js";
 import { verifyAuthToken } from "../utils/jwtUtils.js";
@@ -25,10 +29,9 @@ function getCookieValue(cookieHeader, name) {
 }
 
 function clearAuthCookie(res) {
-    const { name, options } = getAuthCookieConfig();
-    const { maxAge, ...clearOptions } = options;
+    const { name, options } = getAuthCookieClearConfig();
 
-    res.clearCookie(name, clearOptions);
+    res.clearCookie(name, options);
 }
 
 async function authenticate(req, res, next) {
@@ -49,6 +52,7 @@ async function authenticate(req, res, next) {
         }
 
         req.authenticatedUser = user;
+        req.authenticatedSessionId = payload.sid;
         return next();
     } catch (error) {
         return next(error);

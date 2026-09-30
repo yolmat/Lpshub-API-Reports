@@ -18,6 +18,16 @@ function getAuthCookieConfig(env = process.env) {
     });
 }
 
+function getAuthCookieClearConfig(env = process.env) {
+    const { name, options } = getAuthCookieConfig(env);
+    const { maxAge, ...clearOptions } = options;
+
+    return Object.freeze({
+        name,
+        options: Object.freeze(clearOptions)
+    });
+}
+
 function getAuthSecurityConfig(env = process.env) {
     return Object.freeze({
         jwtSecret: env.JWT_SECRET?.trim(),
@@ -30,6 +40,7 @@ export {
     AUTH_SESSION_ABSOLUTE_TIMEOUT_MS,
     AUTH_SESSION_INACTIVITY_TIMEOUT_MS,
     AUTH_TOKEN_EXPIRATION_SECONDS,
+    getAuthCookieClearConfig,
     getAuthCookieConfig,
     getAuthSecurityConfig
 };

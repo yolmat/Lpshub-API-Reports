@@ -1,4 +1,4 @@
-import { getAuthCookieConfig } from "../config/auth.js";
+import { getAuthCookieClearConfig, getAuthCookieConfig } from "../config/auth.js";
 import authService from "../services/authService.js";
 
 async function register(req, res, next) {
@@ -33,4 +33,21 @@ async function resetPassword(req, res, next) {
     }
 }
 
-export { login, register, resetPassword };
+async function logout(req, res, next) {
+    try {
+        await authService.logoutUser({
+            login: req.validated.body.login,
+            authenticatedUser: req.authenticatedUser,
+            sessionId: req.authenticatedSessionId
+        });
+        const { name, options } = getAuthCookieClearConfig();
+
+        res.clearCookie(name, options);
+
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+export { login, logout, register, resetPassword };

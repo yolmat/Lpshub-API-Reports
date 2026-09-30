@@ -1,5 +1,6 @@
 ## Não publicado
 
+- Adicionada rota de logout que exclui a sessão autenticada e remove o cookie do navegador.
 - Adicionado timeout absoluto de oito horas para sessões, independente da atividade do usuário.
 - Alterado o timeout por inatividade da sessão para duas horas, com renovação da atividade em requisições autenticadas e válidas.
 - Adicionado timeout de uma hora por inatividade para sessões autenticadas, com invalidação no servidor e remoção do cookie.

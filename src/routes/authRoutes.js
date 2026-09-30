@@ -1,10 +1,11 @@
 import { Router } from "express";
 
-import { login, register, resetPassword } from "../controllers/authController.js";
+import { login, logout, register, resetPassword } from "../controllers/authController.js";
 import { authenticate, requireAdmin } from "../middlewares/authMiddleware.js";
 import validateRequest from "../middlewares/validateRequestMiddleware.js";
 import {
     authLoginBodySchema,
+    authLogoutBodySchema,
     authPasswordResetBodySchema,
     authRegisterBodySchema,
     protectedRouteHeadersSchema
@@ -14,6 +15,12 @@ function createAuthRoutes(rateLimiters) {
     const router = Router();
 
     router.post("/auth/login", rateLimiters.login, validateRequest({ body: authLoginBodySchema }), login);
+    router.post(
+        "/auth/logout",
+        validateRequest({ headers: protectedRouteHeadersSchema, body: authLogoutBodySchema }),
+        authenticate,
+        logout
+    );
     router.post(
         "/auth/register",
         rateLimiters.register,

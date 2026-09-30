@@ -156,6 +156,20 @@ function createAuthService({
         return toPublicUser(updatedUser);
     }
 
+    async function logoutUser({ login, authenticatedUser, sessionId }) {
+        const userLogin = getLogin(login);
+
+        if (userLogin !== authenticatedUser.login) {
+            throw new AppError(
+                "Você só pode encerrar a própria sessão.",
+                403,
+                "FORBIDDEN"
+            );
+        }
+
+        await userRepository.deleteUserSession(sessionId);
+    }
+
     async function getAuthenticatedUser(id, sessionId) {
         const [user, session] = await Promise.all([
             userRepository.findUserById(id),
@@ -185,6 +199,7 @@ function createAuthService({
     return {
         getAuthenticatedUser,
         loginUser,
+        logoutUser,
         registerUser,
         resetUserPassword
     };

@@ -186,3 +186,39 @@ test("invalida a sessão após oito horas mesmo com atividade recente", async ()
     assert.equal(await service.getAuthenticatedUser(user.id, sid), null);
     assert.equal(userRepository.getSession(sid), null);
 });
+
+test("encerra somente a sessão do usuário autenticado", async () => {
+    const userRepository = createUserRepository();
+    const service = createAuthService({
+        userRepository,
+        getSecurityConfig: () => securityConfig,
+        createSessionId: () => "sessao-logout"
+    });
+    const user = await service.registerUser({
+        login: "mlogout",
+        email: "mlogout@teste.com.br",
+        senha: "senha-inicial"
+    });
+    const { token } = await service.loginUser({
+        login: "mlogout",
+        senha: "senha-inicial"
+    });
+    const { sid } = verifyAuthToken(token, securityConfig.jwtSecret);
+
+    await assert.rejects(
+        service.logoutUser({
+            login: "outro-usuario",
+            authenticatedUser: user,
+            sessionId: sid
+        }),
+        { code: "FORBIDDEN" }
+    );
+    assert.notEqual(userRepository.getSession(sid), null);
+
+    await service.logoutUser({
+        login: "mlogout",
+        authenticatedUser: user,
+        sessionId: sid
+    });
+    assert.equal(userRepository.getSession(sid), null);
+});
