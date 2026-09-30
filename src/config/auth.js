@@ -9,7 +9,7 @@ function getAuthCookieConfig(env = process.env) {
         options: Object.freeze({
             httpOnly: true,
             secure: isProduction,
-            sameSite: "lax",
+            sameSite: "strict",
             path: "/",
             maxAge: AUTH_TOKEN_EXPIRATION_SECONDS * 1000
         })

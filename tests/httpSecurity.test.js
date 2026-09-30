@@ -46,11 +46,17 @@ test("configura o cookie de autenticação com restrições seguras", () => {
     assert.deepEqual(developmentCookie.options, {
         httpOnly: true,
         secure: false,
-        sameSite: "lax",
+        sameSite: "strict",
         path: "/",
         maxAge: 8 * 60 * 60 * 1000
     });
-    assert.equal(productionCookie.options.secure, true);
+    assert.deepEqual(productionCookie.options, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+        path: "/",
+        maxAge: 8 * 60 * 60 * 1000
+    });
 });
 
 test("adiciona cabeçalhos de segurança e libera CORS apenas para origem autorizada", async () => {
