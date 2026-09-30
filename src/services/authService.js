@@ -1,4 +1,5 @@
 import {
+    AUTH_SESSION_ABSOLUTE_TIMEOUT_MS,
     AUTH_SESSION_INACTIVITY_TIMEOUT_MS,
     AUTH_TOKEN_EXPIRATION_SECONDS,
     getAuthSecurityConfig
@@ -119,10 +120,12 @@ function createAuthService({
             );
         }
 
+        const sessionCreationDate = now();
         const session = await userRepository.createUserSession({
             id: createSessionId(),
             userId: user.id,
-            lastActivityAt: now()
+            createdAt: sessionCreationDate,
+            lastActivityAt: sessionCreationDate
         });
         const token = createAuthToken(
             user,
@@ -165,8 +168,12 @@ function createAuthService({
 
         const currentDate = now();
         const elapsedMilliseconds = currentDate.getTime() - session.lastActivityAt.getTime();
+        const sessionAgeMilliseconds = currentDate.getTime() - session.createdAt.getTime();
 
-        if (elapsedMilliseconds >= AUTH_SESSION_INACTIVITY_TIMEOUT_MS) {
+        if (
+            elapsedMilliseconds >= AUTH_SESSION_INACTIVITY_TIMEOUT_MS
+            || sessionAgeMilliseconds >= AUTH_SESSION_ABSOLUTE_TIMEOUT_MS
+        ) {
             await userRepository.deleteUserSession(session.id);
             return null;
         }

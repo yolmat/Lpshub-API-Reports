@@ -156,3 +156,33 @@ test("mantém a sessão ativa com uso contínuo e invalida após duas horas de i
     assert.equal(await service.getAuthenticatedUser(user.id, sid), null);
     assert.equal(userRepository.getSession(sid), null);
 });
+
+test("invalida a sessão após oito horas mesmo com atividade recente", async () => {
+    const userRepository = createUserRepository();
+    let currentDate = new Date("2026-09-30T12:00:00.000Z");
+    const service = createAuthService({
+        userRepository,
+        getSecurityConfig: () => securityConfig,
+        createSessionId: () => "sessao-com-timeout-absoluto",
+        now: () => currentDate
+    });
+    const user = await service.registerUser({
+        login: "mabsoluto",
+        email: "mabsoluto@teste.com.br",
+        senha: "senha-inicial"
+    });
+    const { token } = await service.loginUser({
+        login: "mabsoluto",
+        senha: "senha-inicial"
+    });
+    const { sid } = verifyAuthToken(token, securityConfig.jwtSecret);
+
+    for (const time of ["13:59", "15:58", "17:57", "19:56"]) {
+        currentDate = new Date(`2026-09-30T${time}:00.000Z`);
+        assert.equal((await service.getAuthenticatedUser(user.id, sid)).id, user.id);
+    }
+
+    currentDate = new Date("2026-09-30T20:00:00.000Z");
+    assert.equal(await service.getAuthenticatedUser(user.id, sid), null);
+    assert.equal(userRepository.getSession(sid), null);
+});
