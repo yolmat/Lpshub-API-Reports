@@ -16,7 +16,7 @@ import {
     requestContext,
     updateRequestContext
 } from "../src/middlewares/requestContext.js";
-import prisma from "../src/repository/prisma.js";
+import prisma from "../src/repositories/prisma.js";
 import {
     createAuditService,
     createSessionReference,

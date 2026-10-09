@@ -2,7 +2,7 @@ import "dotenv/config";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import prisma from "../src/repository/prisma.js";
+import prisma from "../src/repositories/prisma.js";
 import { hashPassword } from "../src/utils/passwordUtils.js";
 
 function getFullTestUserConfig(env = process.env) {

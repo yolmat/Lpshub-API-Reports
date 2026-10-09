@@ -1,4 +1,4 @@
-import prisma from "../repository/prisma.js";
+import prisma from "./prisma.js";
 
 function createAuditLog(data) {
     return prisma.auditLog.create({ data });

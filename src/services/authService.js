@@ -5,7 +5,7 @@ import {
     getAuthSecurityConfig
 } from "../config/auth.js";
 import { randomUUID } from "node:crypto";
-import * as defaultUserRepository from "../repository/userRepository.js";
+import * as defaultUserRepository from "../repositories/userRepository.js";
 import defaultAuditService from "./auditService.js";
 import AppError from "../utils/AppError.js";
 import {
