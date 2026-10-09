@@ -72,6 +72,7 @@ A migration `20261009120000_add_audit_logs` cria a tabela, a chave estrangeira e
 A migration `20261009130000_expand_audit_logs` remove a relação mutável, preserva os registros existentes e adiciona os campos e enums da trilha corporativa.
 A migration `20261009140000_add_route_audit_actions` adiciona as ações das rotas técnicas ao enum `AuditAction`.
 A migration `20261009160000_add_current_user_audit_action` adiciona o evento e a ação usados pela consulta do usuário autenticado.
+A migration `20261009170000_add_service_layer_connection_audit_action` adiciona o evento e a ação da verificação de conectividade do Service Layer.
 
 Responsabilidades:
 

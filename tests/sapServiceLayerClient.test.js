@@ -1,9 +1,43 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+    checkServiceLayerConnection,
     getAllFiliais,
     getExtratosBancarios
 } from "../src/integrations/sapServiceLayerClient.js";
+
+test("verifica a conexao com o Service Layer e encerra a sessao SAP", async (t) => {
+    const originalFetch = globalThis.fetch;
+    const calls = [];
+
+    globalThis.fetch = async (input, options = {}) => {
+        const url = input.toString();
+        calls.push({ url, method: options.method || "GET" });
+
+        if (url.endsWith("/Login")) {
+            return new Response(JSON.stringify({ SessionId: "sessao-teste" }), {
+                status: 200,
+                headers: { "content-type": "application/json" }
+            });
+        }
+
+        return new Response(null, { status: 204 });
+    };
+
+    t.after(() => {
+        globalThis.fetch = originalFetch;
+    });
+
+    await checkServiceLayerConnection();
+
+    assert.deepEqual(
+        calls.map(({ method, url }) => ({ method, url: new URL(url).pathname })),
+        [
+            { method: "POST", url: "/b1s/v1/Login" },
+            { method: "POST", url: "/b1s/v1/Logout" }
+        ]
+    );
+});
 
 test("monta o filtro de extrato bancario e encerra a sessao SAP", async (t) => {
     const originalFetch = globalThis.fetch;

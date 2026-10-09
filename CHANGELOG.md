@@ -1,5 +1,7 @@
 ## Não publicado
 
+- Adicionada a rota autenticada `GET /api/v1/service-layer` para verificar a conectividade e as credenciais do SAP Business One Service Layer sem expor dados externos.
+- Adicionado o comando `npm run fullTest` para verificar o banco, preparar o administrador de teste e iniciar o ambiente de desenvolvimento.
 - Simplificada a rota de logout para identificar e encerrar somente a sessão recebida pelo cookie de autenticação.
 - Adicionada a rota autenticada `GET /api/v1/auth/me`, que retorna id, login e email da sessão atual.
 - Adicionada a rota administrativa `GET /api/v1/auth/users` para listar usuários sem expor hashes ou sessões.

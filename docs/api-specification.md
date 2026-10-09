@@ -157,6 +157,7 @@ A API não armazena bodies completos na auditoria. Para relatórios, são regist
 | `POST` | `/api/v1/auth/deactivate` | `DISABLE_USER` |
 | `POST` | `/api/v1/extratos-bancarios` | `BANK_STATEMENT_SEARCH` |
 | `GET` | `/api/v1/filiais` | `BRANCH_LIST` |
+| `GET` | `/api/v1/service-layer` | `CHECK_SERVICE_LAYER_CONNECTION` |
 
 O middleware de auditoria é global e executa antes de HTTPS, rate limit, validação, autenticação e controllers. Portanto, todas as respostas dessas rotas, inclusive falhas antecipadas, produzem auditoria.
 
@@ -430,3 +431,30 @@ A API reúne automaticamente os itens de todas as páginas indicadas por `odata.
 - `500 SAP_CONFIGURATION_ERROR`: configuração do SAP incompleta;
 - `502 SAP_CONNECTION_ERROR`, `SAP_TIMEOUT` ou `SAP_REQUEST_ERROR`: falha de comunicação com o SAP;
 - `502 SAP_RESPONSE_ERROR` ou `SAP_PAGINATION_ERROR`: resposta ou paginação inválida do SAP.
+
+---
+
+# 14. Verificação do Service Layer
+
+## GET /api/v1/service-layer
+
+Verifica se o SAP Business One Service Layer está acessível com as credenciais configuradas. A operação abre e encerra uma sessão SAP, sem consultar ou retornar dados do SAP.
+
+### Autenticação
+
+Obrigatória. Envie o cookie de autenticação `lpshub_access_token` emitido no login.
+
+### Resposta de sucesso
+
+Status: `200`
+
+```json
+{
+    "message": "Service Layer funcionando"
+}
+```
+
+### Erros possíveis
+
+- `500 SAP_CONFIGURATION_ERROR`: configuração do SAP incompleta;
+- `502 SAP_CONNECTION_ERROR`, `SAP_TIMEOUT` ou `SAP_REQUEST_ERROR`: falha de comunicação, autenticação ou encerramento de sessão no SAP.

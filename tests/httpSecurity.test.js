@@ -145,6 +145,7 @@ test("exige autenticação em todas as rotas, exceto login e API", async () => {
     const invalidCookie = `${AUTH_COOKIE_NAME}=token-inválido`;
     const protectedRequests = [
         ["/health", { headers: { cookie: invalidCookie } }],
+        ["/api/v1/service-layer", { headers: { cookie: invalidCookie } }],
         ["/api/v1/filiais", { headers: { cookie: invalidCookie } }],
         ["/api/v1/extratos-bancarios", {
             method: "POST",

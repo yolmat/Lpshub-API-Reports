@@ -223,6 +223,10 @@ async function executeWithSapSession(operation) {
     }
 }
 
+async function checkServiceLayerConnection() {
+    await executeWithSapSession(async () => undefined);
+}
+
 async function getAllFiliais() {
     const { url } = getConfig();
     const cookie = await login();
@@ -304,4 +308,8 @@ async function getExtratosBancarios({ empresas, dataInicial, dataFinal, datas })
     ));
 }
 
-export { getAllFiliais, getExtratosBancarios };
+export {
+    checkServiceLayerConnection,
+    getAllFiliais,
+    getExtratosBancarios
+};

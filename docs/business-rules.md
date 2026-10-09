@@ -277,3 +277,7 @@ Uma futura consulta administrativa ao histórico deve registrar `AUDIT_LOG_VIEWE
 ### REG-051
 
 Toda rota deve possuir uma entrada em `AUDITED_ROUTES` com método, caminho, evento, `AuditAction` e sistema de destino. A rota deve utilizar o caminho dessa mesma definição. Não é permitido cadastrar uma rota funcional com a ação genérica `HTTP_REQUEST`.
+
+### REG-052
+
+A verificação autenticada do Service Layer abre uma sessão SAP para confirmar conectividade e credenciais, encerra essa sessão em `finally` e não consulta nem retorna dados externos.

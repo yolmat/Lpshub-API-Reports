@@ -76,7 +76,7 @@ test("todas as rotas possuem AuditAction sem usar a ação genérica", () => {
     };
     const middleware = createAuditMiddleware(service);
 
-    assert.equal(routes.length, 11);
+    assert.equal(routes.length, 12);
     assert.equal(new Set(routes.map((route) => (
         `${route.method} ${route.fullPath}`
     ))).size, routes.length);

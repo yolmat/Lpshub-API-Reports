@@ -108,6 +108,14 @@ const AUDITED_ROUTES = Object.freeze({
         eventType: AUDIT_EVENTS.REPORT_EXECUTED,
         action: AUDIT_ACTIONS.BRANCH_LIST,
         targetSystem: AUDIT_TARGET_SYSTEMS.SAP_B1
+    }),
+    SERVICE_LAYER: defineRoute({
+        method: "GET",
+        path: "/service-layer",
+        fullPath: "/api/v1/service-layer",
+        eventType: AUDIT_EVENTS.SERVICE_LAYER_CONNECTION_CHECK,
+        action: AUDIT_ACTIONS.CHECK_SERVICE_LAYER_CONNECTION,
+        targetSystem: AUDIT_TARGET_SYSTEMS.SAP_B1
     })
 });
 
