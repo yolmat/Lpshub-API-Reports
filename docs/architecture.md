@@ -111,7 +111,7 @@ O cookie reservado para autenticação é `lpshub_access_token`. Ele é emitido 
 
 O JWT contém o identificador criptograficamente aleatório da sessão. A sessão fica no PostgreSQL e possui `createdAt` e `lastActivityAt`; o middleware autenticado atualiza apenas a última atividade em cada requisição autenticada e validada. Após duas horas sem atividade ou oito horas desde a criação da sessão, a sessão é excluída no servidor, o cookie é removido e a API retorna `401`.
 
-O logout exige autenticação e recebe o login do próprio usuário. Ele exclui apenas a sessão vinculada ao cookie autenticado e remove esse cookie da resposta.
+O logout exige somente autenticação por cookie. Ele exclui apenas a sessão vinculada ao cookie autenticado e remove esse cookie da resposta.
 
 A desativação de usuário é uma operação administrativa. Ela desativa a conta e remove todas as suas sessões em uma transação. Em cada requisição autenticada, o middleware também verifica o status da conta e remove a sessão atual quando o usuário estiver inativo.
 

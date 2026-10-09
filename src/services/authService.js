@@ -202,17 +202,20 @@ function createAuthService({
         return toPublicUser(updatedUser);
     }
 
-    async function logoutUser({ login, authenticatedUser, sessionId }) {
-        const userLogin = getLogin(login);
+    async function listUsers() {
+        const users = await userRepository.findAllUsers();
 
-        if (userLogin !== authenticatedUser.login) {
-            throw new AppError(
-                "Você só pode encerrar a própria sessão.",
-                403,
-                "FORBIDDEN"
-            );
-        }
+        auditService.registerRequestEvent({
+            eventType: AUDIT_EVENTS.USER_LISTED,
+            action: AUDIT_ACTIONS.LIST_USERS,
+            targetSystem: AUDIT_TARGET_SYSTEMS.POSTGRESQL,
+            responseCount: users.length
+        });
 
+        return users.map(toPublicUser);
+    }
+
+    async function logoutUser({ sessionId }) {
         await userRepository.deleteUserSession(sessionId);
         auditService.registerRequestEvent({
             eventType: AUDIT_EVENTS.AUTH_LOGOUT,
@@ -298,6 +301,7 @@ function createAuthService({
         getAuthenticatedUser,
         deactivateUser,
         loginUser,
+        listUsers,
         logoutUser,
         registerUser,
         resetUserPassword

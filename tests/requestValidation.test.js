@@ -84,3 +84,13 @@ test("rejeita query, params e cookie de autenticação ausente", async () => {
     assert.equal(headers.error.code, "INVALID_REQUEST");
     assert.equal(validHeaders.error, undefined);
 });
+
+test("rejeita body na rota de logout", async () => {
+    const { error } = await validate({ body: emptyObjectSchema }, {
+        body: { login: "msaraiva" }
+    });
+
+    assert.equal(error.code, "INVALID_REQUEST");
+    assert.equal(error.details[0].location, "body");
+    assert.equal(error.details[0].path, "login");
+});

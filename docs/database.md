@@ -64,11 +64,14 @@ O model `AuditLog` mantém a trilha corporativa append-only. `id` e `requestId` 
 
 As ações `API_STATUS_CHECK` e `HEALTH_CHECK` identificam explicitamente as rotas técnicas, evitando o uso de `HTTP_REQUEST` em rotas conhecidas.
 
+A consulta administrativa de usuários seleciona somente `id`, `login`, `email`, `status`, `role`, `createdAt` e `updatedAt`; `passwordHash` e sessões não são carregados para essa operação.
+
 Não existe chave estrangeira entre `AuditLog.userId` e `User`. Essa decisão preserva o snapshot sem atualizações automáticas caso a conta de origem deixe de existir.
 
 A migration `20261009120000_add_audit_logs` cria a tabela, a chave estrangeira e os índices.
 A migration `20261009130000_expand_audit_logs` remove a relação mutável, preserva os registros existentes e adiciona os campos e enums da trilha corporativa.
 A migration `20261009140000_add_route_audit_actions` adiciona as ações das rotas técnicas ao enum `AuditAction`.
+A migration `20261009160000_add_current_user_audit_action` adiciona o evento e a ação usados pela consulta do usuário autenticado.
 
 Responsabilidades:
 

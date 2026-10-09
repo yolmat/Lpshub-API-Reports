@@ -23,6 +23,19 @@ async function login(req, res, next) {
     }
 }
 
+async function getCurrentUser(req, res, next) {
+    try {
+        const { id, login, email } = req.authenticatedUser;
+
+        return res.status(200).json({
+            success: true,
+            data: { id, login, email }
+        });
+    } catch (error) {
+        return next(error);
+    }
+}
+
 async function resetPassword(req, res, next) {
     try {
         const user = await authService.resetUserPassword(req.validated.body);
@@ -33,11 +46,19 @@ async function resetPassword(req, res, next) {
     }
 }
 
+async function listUsers(req, res, next) {
+    try {
+        const users = await authService.listUsers();
+
+        return res.status(200).json({ success: true, data: users });
+    } catch (error) {
+        return next(error);
+    }
+}
+
 async function logout(req, res, next) {
     try {
         await authService.logoutUser({
-            login: req.validated.body.login,
-            authenticatedUser: req.authenticatedUser,
             sessionId: req.authenticatedSessionId
         });
         const { name, options } = getAuthCookieClearConfig();
@@ -66,4 +87,12 @@ async function deactivateUser(req, res, next) {
     }
 }
 
-export { deactivateUser, login, logout, register, resetPassword };
+export {
+    deactivateUser,
+    getCurrentUser,
+    listUsers,
+    login,
+    logout,
+    register,
+    resetPassword
+};

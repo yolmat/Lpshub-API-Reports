@@ -1,5 +1,8 @@
 ## Não publicado
 
+- Simplificada a rota de logout para identificar e encerrar somente a sessão recebida pelo cookie de autenticação.
+- Adicionada a rota autenticada `GET /api/v1/auth/me`, que retorna id, login e email da sessão atual.
+- Adicionada a rota administrativa `GET /api/v1/auth/users` para listar usuários sem expor hashes ou sessões.
 - Corrigida a proteção das rotas de extratos bancários, filiais e saúde para propagar usuário e sessão ao `AuditLog`; somente login e `GET /api` permanecem públicos.
 - Adicionado logging operacional estruturado com Pino e Pino HTTP, `requestId` UUID, contexto assíncrono, detecção de endpoints lentos e classificação de erros entre SAP e aplicação.
 - Adicionado `pino-pretty` para facilitar a leitura dos logs no ambiente de desenvolvimento, mantendo JSON em produção.

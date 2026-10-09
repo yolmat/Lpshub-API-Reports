@@ -1,15 +1,23 @@
 import { Router } from "express";
 
 import { AUDITED_ROUTES } from "../config/auditRoutes.js";
-import { deactivateUser, login, logout, register, resetPassword } from "../controllers/authController.js";
+import {
+    deactivateUser,
+    getCurrentUser,
+    listUsers,
+    login,
+    logout,
+    register,
+    resetPassword
+} from "../controllers/authController.js";
 import { authenticate, requireAdmin } from "../middlewares/authMiddleware.js";
 import validateRequest from "../middlewares/validateRequestMiddleware.js";
 import {
     authDeactivateUserBodySchema,
     authLoginBodySchema,
-    authLogoutBodySchema,
     authPasswordResetBodySchema,
     authRegisterBodySchema,
+    emptyObjectSchema,
     protectedRouteHeadersSchema
 } from "../validations/requestSchemas.js";
 
@@ -22,9 +30,18 @@ function createAuthRoutes(rateLimiters) {
         validateRequest({ body: authLoginBodySchema }),
         login
     );
+    router.get(
+        AUDITED_ROUTES.AUTH_ME.path,
+        validateRequest({ headers: protectedRouteHeadersSchema }),
+        authenticate,
+        getCurrentUser
+    );
     router.post(
         AUDITED_ROUTES.AUTH_LOGOUT.path,
-        validateRequest({ headers: protectedRouteHeadersSchema, body: authLogoutBodySchema }),
+        validateRequest({
+            headers: protectedRouteHeadersSchema,
+            body: emptyObjectSchema
+        }),
         authenticate,
         logout
     );
@@ -35,6 +52,13 @@ function createAuthRoutes(rateLimiters) {
         authenticate,
         requireAdmin,
         register
+    );
+    router.get(
+        AUDITED_ROUTES.AUTH_USERS.path,
+        validateRequest({ headers: protectedRouteHeadersSchema }),
+        authenticate,
+        requireAdmin,
+        listUsers
     );
     router.post(
         AUDITED_ROUTES.AUTH_PASSWORD_RESET.path,

@@ -6,6 +6,7 @@ import test from "node:test";
 import { createApp } from "../src/app.js";
 import { AUTH_COOKIE_NAME, getAuthCookieConfig } from "../src/config/auth.js";
 import { getHttpSecurityConfig } from "../src/config/env.js";
+import { requireAdmin } from "../src/middlewares/authMiddleware.js";
 import {
     AUTH_RATE_LIMIT,
     GLOBAL_RATE_LIMIT,
@@ -57,6 +58,22 @@ test("configura o cookie de autenticação com restrições seguras", () => {
         path: "/",
         maxAge: 8 * 60 * 60 * 1000
     });
+});
+
+test("restringe a listagem de usuários ao papel ADM", () => {
+    const rejectedError = requireAdmin(
+        { authenticatedUser: { role: "USER" } },
+        {},
+        (error) => error
+    );
+    const allowedResult = requireAdmin(
+        { authenticatedUser: { role: "ADM" } },
+        {},
+        (error) => error
+    );
+
+    assert.equal(rejectedError.code, "FORBIDDEN");
+    assert.equal(allowedResult, undefined);
 });
 
 test("adiciona cabeçalhos de segurança e libera CORS apenas para origem autorizada", async () => {
@@ -140,13 +157,18 @@ test("exige autenticação em todas as rotas, exceto login e API", async () => {
         }],
         ["/api/v1/auth/logout", {
             method: "POST",
-            headers: { cookie: invalidCookie, "content-type": "application/json" },
-            body: JSON.stringify({ login: "msaraiva" })
+            headers: { cookie: invalidCookie }
         }],
         ["/api/v1/auth/register", {
             method: "POST",
             headers: { cookie: invalidCookie, "content-type": "application/json" },
             body: JSON.stringify({ login: "novo", email: "novo@teste.com", senha: "senha" })
+        }],
+        ["/api/v1/auth/users", {
+            headers: { cookie: invalidCookie }
+        }],
+        ["/api/v1/auth/me", {
+            headers: { cookie: invalidCookie }
         }],
         ["/api/v1/auth/password-reset", {
             method: "POST",

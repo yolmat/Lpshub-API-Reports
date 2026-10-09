@@ -42,10 +42,6 @@ const authPasswordResetBodySchema = z.object({
     email: emailSchema
 }).strict();
 
-const authLogoutBodySchema = z.object({
-    login: loginSchema
-}).strict();
-
 const authDeactivateUserBodySchema = z.object({
     login: loginSchema
 }).strict();
@@ -108,7 +104,6 @@ const extratoBancarioBodySchema = z.object({
 export {
     authDeactivateUserBodySchema,
     authLoginBodySchema,
-    authLogoutBodySchema,
     authPasswordResetBodySchema,
     authRegisterBodySchema,
     emptyObjectSchema,

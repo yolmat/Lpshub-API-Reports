@@ -122,11 +122,19 @@ Cada login cria uma sessão identificada por valor aleatório criptograficamente
 
 ### REG-030
 
-O logout exige autenticação e o login informado deve pertencer ao usuário autenticado. A operação exclui somente a sessão vinculada ao cookie atual e remove o cookie do navegador.
+O logout exige autenticação pelo cookie. A operação exclui somente a sessão vinculada ao cookie atual e remove o cookie do navegador.
 
 ### REG-031
 
 Somente administradores podem desativar usuários. A desativação marca a conta como inativa e exclui todas as sessões do usuário. Toda requisição autenticada deve conferir o status da conta; ao identificar conta inativa, a sessão atual é removida e a API retorna `401`.
+
+### REG-032
+
+Somente administradores podem listar usuários. A listagem retorna os campos administrativos da conta, mas nunca `passwordHash`, sessões ou identificadores de sessão.
+
+### REG-033
+
+A consulta do usuário autenticado exige cookie de sessão válido e retorna somente `id`, `login` e `email` da própria conta.
 
 ---
 

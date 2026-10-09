@@ -12,6 +12,21 @@ function findUserById(id) {
     return prisma.user.findUnique({ where: { id } });
 }
 
+function findAllUsers() {
+    return prisma.user.findMany({
+        select: {
+            id: true,
+            login: true,
+            email: true,
+            status: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true
+        },
+        orderBy: { login: "asc" }
+    });
+}
+
 function findUserByLoginAndEmail(login, email) {
     return prisma.user.findFirst({ where: { login, email } });
 }
@@ -59,6 +74,7 @@ export {
     createUser,
     deactivateUserAndDeleteSessions,
     deleteUserSession,
+    findAllUsers,
     findUserById,
     findUserByLogin,
     findUserByLoginAndEmail,

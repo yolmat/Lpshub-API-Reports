@@ -150,6 +150,7 @@ A API não armazena bodies completos na auditoria. Para relatórios, são regist
 | `GET` | `/api` | `API_STATUS_CHECK` |
 | `GET` | `/health` | `HEALTH_CHECK` |
 | `POST` | `/api/v1/auth/login` | `AUTHENTICATE` |
+| `GET` | `/api/v1/auth/me` | `VIEW_CURRENT_USER` |
 | `POST` | `/api/v1/auth/logout` | `LOGOUT` |
 | `POST` | `/api/v1/auth/register` | `CREATE_USER` |
 | `POST` | `/api/v1/auth/password-reset` | `RESET_USER_PASSWORD` |
@@ -230,9 +231,13 @@ O JWT referencia uma sessão mantida no servidor. Cada requisição autenticada 
 
 Recebe `login` e `senha`. Em caso de sucesso, a API responde os dados públicos do usuário e define o cookie de autenticação.
 
+### GET /api/v1/auth/me
+
+Exige cookie de autenticação válido. Retorna o `id`, o `login` e o `email` do usuário ao qual a sessão pertence. Cookies ausentes, inválidos, expirados, revogados ou associados a usuários inativos retornam `401 UNAUTHENTICATED`.
+
 ### POST /api/v1/auth/logout
 
-Exige cookie de autenticação e recebe `login`. O login deve corresponder ao usuário autenticado. A API exclui a sessão atual no servidor, remove o cookie e responde `200` com `{ "success": true }`.
+Exige somente o cookie de autenticação. A API identifica a sessão pelo cookie, exclui somente essa `UserSession`, remove o cookie do navegador e responde `200` com `{ "success": true }`.
 
 ### POST /api/v1/auth/deactivate
 
@@ -241,6 +246,10 @@ Exige cookie de um usuário `ADM` e recebe `login`. A API desativa o usuário, e
 ### POST /api/v1/auth/register
 
 Exige cookie de um usuário `ADM`. Recebe `login`, `email` e `senha`; cria um usuário ativo com papel `USER`. A resposta não contém senha, hash ou token.
+
+### GET /api/v1/auth/users
+
+Exige cookie de um usuário `ADM`. Retorna todos os usuários ordenados por login, com `id`, `login`, `email`, `status`, `role`, `createdAt` e `updatedAt`. A resposta nunca inclui `passwordHash`, sessões ou identificadores de sessão.
 
 ### POST /api/v1/auth/password-reset
 

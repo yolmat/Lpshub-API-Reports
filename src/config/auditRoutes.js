@@ -45,6 +45,14 @@ const AUDITED_ROUTES = Object.freeze({
         action: AUDIT_ACTIONS.AUTHENTICATE,
         targetSystem: AUDIT_TARGET_SYSTEMS.APPLICATION
     }),
+    AUTH_ME: defineRoute({
+        method: "GET",
+        path: "/auth/me",
+        fullPath: "/api/v1/auth/me",
+        eventType: AUDIT_EVENTS.USER_VIEWED,
+        action: AUDIT_ACTIONS.VIEW_CURRENT_USER,
+        targetSystem: AUDIT_TARGET_SYSTEMS.APPLICATION
+    }),
     AUTH_LOGOUT: defineRoute({
         method: "POST",
         path: "/auth/logout",
@@ -59,6 +67,14 @@ const AUDITED_ROUTES = Object.freeze({
         fullPath: "/api/v1/auth/register",
         eventType: AUDIT_EVENTS.USER_CREATED,
         action: AUDIT_ACTIONS.CREATE_USER,
+        targetSystem: AUDIT_TARGET_SYSTEMS.POSTGRESQL
+    }),
+    AUTH_USERS: defineRoute({
+        method: "GET",
+        path: "/auth/users",
+        fullPath: "/api/v1/auth/users",
+        eventType: AUDIT_EVENTS.USER_LISTED,
+        action: AUDIT_ACTIONS.LIST_USERS,
         targetSystem: AUDIT_TARGET_SYSTEMS.POSTGRESQL
     }),
     AUTH_PASSWORD_RESET: defineRoute({

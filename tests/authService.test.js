@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createAuthService } from "../src/services/authService.js";
-import { AUDIT_EVENTS } from "../src/utils/auditEvents.js";
+import { AUDIT_ACTIONS, AUDIT_EVENTS } from "../src/utils/auditEvents.js";
 import { verifyAuthToken } from "../src/utils/jwtUtils.js";
 import { hashPassword, verifyPassword } from "../src/utils/passwordUtils.js";
 
@@ -36,6 +36,11 @@ function createUserRepository() {
         },
         async findUserById(id) {
             return users.find((user) => user.id === id) || null;
+        },
+        async findAllUsers() {
+            return [...users]
+                .sort((first, second) => first.login.localeCompare(second.login))
+                .map(({ passwordHash, ...user }) => user);
         },
         async findUserByLogin(login) {
             return users.find((user) => user.login === login) || null;
@@ -223,38 +228,41 @@ test("invalida a sessão após oito horas mesmo com atividade recente", async ()
 
 test("encerra somente a sessão do usuário autenticado", async () => {
     const userRepository = createUserRepository();
+    const sessionIds = ["sessao-logout-1", "sessao-logout-2"];
     const service = createAuthService({
         userRepository,
         getSecurityConfig: () => securityConfig,
-        createSessionId: () => "sessao-logout"
+        createSessionId: () => sessionIds.shift()
     });
-    const user = await service.registerUser({
+    const firstUser = await service.registerUser({
         login: "mlogout",
         email: "mlogout@teste.com.br",
         senha: "senha-inicial"
     });
-    const { token } = await service.loginUser({
+    const secondUser = await service.registerUser({
+        login: "moutra",
+        email: "moutra@teste.com.br",
+        senha: "senha-inicial"
+    });
+    const { token: firstToken } = await service.loginUser({
         login: "mlogout",
         senha: "senha-inicial"
     });
-    const { sid } = verifyAuthToken(token, securityConfig.jwtSecret);
-
-    await assert.rejects(
-        service.logoutUser({
-            login: "outro-usuario",
-            authenticatedUser: user,
-            sessionId: sid
-        }),
-        { code: "FORBIDDEN" }
-    );
-    assert.notEqual(userRepository.getSession(sid), null);
+    const { token: secondToken } = await service.loginUser({
+        login: "moutra",
+        senha: "senha-inicial"
+    });
+    const { sid: firstSessionId } = verifyAuthToken(firstToken, securityConfig.jwtSecret);
+    const { sid: secondSessionId } = verifyAuthToken(secondToken, securityConfig.jwtSecret);
 
     await service.logoutUser({
-        login: "mlogout",
-        authenticatedUser: user,
-        sessionId: sid
+        sessionId: firstSessionId
     });
-    assert.equal(userRepository.getSession(sid), null);
+
+    assert.equal(firstUser.login, "mlogout");
+    assert.equal(secondUser.login, "moutra");
+    assert.equal(userRepository.getSession(firstSessionId), null);
+    assert.notEqual(userRepository.getSession(secondSessionId), null);
 });
 
 test("desativa o usuário, encerra suas sessões e rejeita usuário inativo", async () => {
@@ -327,8 +335,6 @@ test("registra eventos semânticos de login, falha e logout no authService", asy
         { code: "INVALID_CREDENTIALS" }
     );
     await service.logoutUser({
-        login: "maudit",
-        authenticatedUser: user,
         sessionId: sid
     });
 
@@ -345,5 +351,37 @@ test("registra eventos semânticos de login, falha e logout no authService", asy
         userId: user.id,
         username: "maudit",
         sessionId: "sessao-auditada"
+    });
+});
+
+test("lista usuários sem expor hashes ou sessões e registra auditoria", async () => {
+    const userRepository = createUserRepository();
+    const auditService = createAuditServiceSpy();
+    const service = createAuthService({
+        userRepository,
+        auditService,
+        getSecurityConfig: () => securityConfig
+    });
+
+    await service.registerUser({
+        login: "zusuario",
+        email: "zusuario@teste.com.br",
+        senha: "senha-inicial"
+    });
+    await service.registerUser({
+        login: "ausuario",
+        email: "ausuario@teste.com.br",
+        senha: "senha-inicial"
+    });
+    const users = await service.listUsers();
+
+    assert.deepEqual(users.map((user) => user.login), ["ausuario", "zusuario"]);
+    assert.equal("passwordHash" in users[0], false);
+    assert.equal("sessions" in users[0], false);
+    assert.deepEqual(auditService.events.at(-1), {
+        eventType: AUDIT_EVENTS.USER_LISTED,
+        action: AUDIT_ACTIONS.LIST_USERS,
+        targetSystem: "POSTGRESQL",
+        responseCount: 2
     });
 });
