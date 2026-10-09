@@ -7,6 +7,7 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "test": "node --test",
+    "fullTest": "node scripts/fullTest.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"

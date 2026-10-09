@@ -348,3 +348,7 @@ Eventos e ações pertencem a listas fechadas. A rota é mantida para diagnósti
 O catálogo `src/config/auditRoutes.js` vincula método, caminho, evento, `AuditAction` e sistema de destino. As definições das rotas reutilizam os caminhos desse catálogo, e o middleware global resolve a ação antes de HTTPS, rate limit, Zod, autenticação e controller. Dessa forma, respostas antecipadas também permanecem dentro do processo de auditoria.
 
 O repository de auditoria expõe somente criação. Não existem operações de atualização ou exclusão na aplicação; uma futura política de retenção deve utilizar uma credencial administrativa separada.
+
+## 16. Preparação local para testes
+
+O comando `npm run fullTest` verifica a conectividade PostgreSQL, prepara por `upsert` o administrador configurado em `FULL_TEST_ADMIN_LOGIN`, `FULL_TEST_ADMIN_EMAIL` e `FULL_TEST_ADMIN_PASSWORD` e inicia `npm run dev`. As credenciais ficam somente no `.env`; o `.env.example` documenta apenas os nomes das variáveis.
