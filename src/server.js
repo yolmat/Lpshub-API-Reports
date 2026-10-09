@@ -2,7 +2,7 @@ import "./config/env.js";
 import app from "./app.js";
 import logger from "./config/logger.js";
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 const server = app.listen(PORT, () => {
     logger.info({ event: "API_STARTED", port: PORT }, "API iniciada.");
