@@ -102,7 +102,7 @@ A consulta de filiais usa `GET /b1s/v1/SQLQueries('LpsHub-GetDadosFiliais')/List
 
 A rota autenticada `GET /api/v1/service-layer` verifica a disponibilidade do Service Layer usando somente `POST /b1s/v1/Login` e `POST /b1s/v1/Logout`. Ela não consulta nem expõe dados do SAP; o logout é executado em `finally` após uma sessão criada com sucesso.
 
-As chamadas usam o timeout configurado por `SAP_SERVICE_LAYER_TIMEOUT_MS`; quando a variável não for informada, o timeout é de 30 segundos.
+As chamadas usam o timeout configurado por `SAP_SERVICE_LAYER_TIMEOUT_MS`; quando a variável estiver ausente ou não produzir um inteiro positivo no parser, o fallback implementado em `src/config/env.js` é de 300000 ms (cinco minutos). Esse limite se aplica a cada chamada, incluindo login, páginas e logout, e não à duração total do relatório. O valor ilustrativo de `.env.example` pode substituir o fallback quando copiado para o ambiente.
 
 O cliente de integração é responsável por verificar respostas HTTP, limitar a comunicação ao host configurado do SAP e transformar falhas externas em erros previsíveis para a API.
 

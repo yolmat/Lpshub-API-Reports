@@ -2,6 +2,8 @@
 
 ## 1. Visão Geral
 
+Para instalação e exemplos de uso, consulte o [guia completo da API](../documentação.md).
+
 A aplicação é uma API backend responsável por disponibilizar informações provenientes do ambiente SAP para sistemas consumidores.
 
 A arquitetura foi definida para separar claramente:
@@ -64,11 +66,13 @@ SAP
 src/
 ├── config/
 ├── controllers/
+├── integrations/
 ├── middlewares/
 ├── repositories/
 ├── routes/
 ├── services/
-└── utils/
+├── utils/
+└── validations/
 ```
 
 ---
@@ -99,7 +103,7 @@ Importações locais devem declarar explicitamente a extensão `.js`.
 
 A configuração HTTP é aplicada na criação da aplicação, antes das rotas. Ela desativa o cabeçalho `X-Powered-By`, usa Helmet para cabeçalhos de segurança e restringe CORS às origens declaradas em `CORS_ALLOWED_ORIGINS`.
 
-O parser JSON é aplicado somente às rotas que recebem body. Atualmente, `POST /api/v1/extratos-bancarios` aceita até 10 KB; as demais rotas não fazem parsing de body.
+O parser JSON é aplicado aos caminhos `/api/v1/extratos-bancarios`, com limite de 10 KB, e `/api/v1/auth`, com limite de 2 KB. As demais rotas não fazem parsing de body.
 
 Em produção, requisições precisam chegar por HTTPS. Quando o TLS termina em proxy reverso, `TRUST_PROXY` deve conter a quantidade de proxies confiáveis para que o Express avalie corretamente `X-Forwarded-Proto`.
 

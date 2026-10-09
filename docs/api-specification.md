@@ -151,6 +151,7 @@ A API não armazena bodies completos na auditoria. Para relatórios, são regist
 | `GET` | `/health` | `HEALTH_CHECK` |
 | `POST` | `/api/v1/auth/login` | `AUTHENTICATE` |
 | `GET` | `/api/v1/auth/me` | `VIEW_CURRENT_USER` |
+| `GET` | `/api/v1/auth/users` | `LIST_USERS` |
 | `POST` | `/api/v1/auth/logout` | `LOGOUT` |
 | `POST` | `/api/v1/auth/register` | `CREATE_USER` |
 | `POST` | `/api/v1/auth/password-reset` | `RESET_USER_PASSWORD` |
@@ -208,15 +209,7 @@ Os parâmetros devem ser validados antes de chegar à lógica de negócio.
 
 # 9. Autenticação
 
-Endpoints protegidos devem exigir JWT.
-
-Exemplo:
-
-```text
-Authorization: Bearer <token>
-```
-
-O token não deve ser colocado em query parameters.
+Endpoints protegidos recebem o JWT pelo cookie `lpshub_access_token`, emitido no login e associado a uma sessão no PostgreSQL. O middleware atual não utiliza `Authorization: Bearer` para autenticar. O token não deve ser colocado em query parameters nem retornado em JSON.
 
 ## CORS
 
@@ -234,7 +227,7 @@ Recebe `login` e `senha`. Em caso de sucesso, a API responde os dados públicos 
 
 ### GET /api/v1/auth/me
 
-Exige cookie de autenticação válido. Retorna o `id`, o `login` e o `email` do usuário ao qual a sessão pertence. Cookies ausentes, inválidos, expirados, revogados ou associados a usuários inativos retornam `401 UNAUTHENTICATED`.
+Exige cookie de autenticação válido. Retorna o `id`, o `login` e o `email` do usuário ao qual a sessão pertence. Cookie ausente ou header sem o nome esperado retorna `400 INVALID_REQUEST` na validação Zod. Cookie com nome correto, mas token inválido ou expirado, sessão removida ou usuário inativo retorna `401 UNAUTHENTICATED` ao passar pelo middleware de autenticação.
 
 ### POST /api/v1/auth/logout
 

@@ -114,6 +114,8 @@ Alterações estruturais devem ser avaliadas antes de serem implementadas.
 
 Alterações no banco devem utilizar migrations do Prisma.
 
+O histórico atual tem uma dependência fora de ordem para uma instalação em banco vazio: `20260930075308_add_user_sessions` cria uma FK para `User`, mas essa tabela é criada apenas em `20260930120000_add_user_model`. A instalação integral em uma base vazia exige uma correção específica desse histórico. Um banco existente com migrations aplicadas não comprova a viabilidade de executar a sequência desde o início. Veja as instruções e limitações no [guia de inicialização](../documentação.md#inicializacao).
+
 Antes de uma alteração:
 
 1. identificar o impacto;

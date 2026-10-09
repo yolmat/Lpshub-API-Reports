@@ -1,5 +1,6 @@
 ## Não publicado
 
+- Adicionado o guia `documentação.md` com inicialização, dependências, contratos das rotas, segurança, variáveis de ambiente, estrutura de pastas, banco e decisões de desenvolvimento; revisadas divergências na documentação de autenticação, parsing JSON e timeout SAP.
 - Adicionada a rota autenticada `GET /api/v1/service-layer` para verificar a conectividade e as credenciais do SAP Business One Service Layer sem expor dados externos.
 - Adicionado o comando `npm run fullTest` para verificar o banco, preparar o administrador de teste e iniciar o ambiente de desenvolvimento.
 - Simplificada a rota de logout para identificar e encerrar somente a sessão recebida pelo cookie de autenticação.
