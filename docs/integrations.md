@@ -130,6 +130,8 @@ Não registrar credenciais ou tokens.
 
 Erros cujo código comece com `SAP_` são registrados com `errorSource: "sap"`. O log contém o `requestId`, o endpoint, o status e o erro sanitizado, sem headers, cookies, credenciais ou payload completo do SAP.
 
+Consultas de extrato geram auditoria com `REPORT_EXECUTED`, ação `BANK_STATEMENT_SEARCH` e sistema `SAP_B1`. O metadata guarda somente quantidades de empresas e datas ou os limites do período. A quantidade de registros retornados fica em `responseCount`; o conteúdo financeiro não é duplicado.
+
 ## 7.1 Proteção de credenciais do Service Layer
 
 Credenciais, sessões e tokens do SAP permanecem dentro da integração. Antes de dados recebidos do SAP retornarem aos services, campos sensíveis conhecidos, como senha, usuário, token, sessão, cookie e dados de autorização, são removidos recursivamente. Esses valores nunca devem integrar a resposta HTTP ao frontend.

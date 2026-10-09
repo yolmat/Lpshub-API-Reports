@@ -12,6 +12,8 @@ function createRateLimiter(limit) {
         standardHeaders: true,
         legacyHeaders: false,
         handler(req, res) {
+            res.locals.errorCode = "RATE_LIMIT_EXCEEDED";
+            res.locals.errorSource = "application";
             res.status(429).json({
                 success: false,
                 error: {

@@ -18,6 +18,45 @@ enum UserRole {
   USER
 }
 
+enum AuditEventType {
+  HTTP_REQUEST_COMPLETED
+  AUTH_LOGIN_SUCCESS
+  AUTH_LOGIN_FAILED
+  AUTH_LOGOUT
+  AUTH_SESSION_EXPIRED
+  REPORT_EXECUTED
+  REPORT_EXPORTED
+  USER_CREATED
+  USER_UPDATED
+  USER_DISABLED
+  PERMISSION_CHANGED
+  EXTERNAL_API_REQUEST
+  EXTERNAL_API_ERROR
+  ACCESS_DENIED
+  VALIDATION_FAILED
+  AUDIT_LOG_VIEWED
+}
+
+enum AuditAction {
+  HTTP_REQUEST
+  API_STATUS_CHECK
+  HEALTH_CHECK
+  AUTHENTICATE
+  LOGOUT
+  SESSION_EXPIRE
+  BANK_STATEMENT_SEARCH
+  BRANCH_LIST
+  CREATE_USER
+  RESET_USER_PASSWORD
+  UPDATE_USER
+  DISABLE_USER
+  CHANGE_PERMISSION
+  EXTERNAL_API_CALL
+  AUTHORIZE_ACCESS
+  VALIDATE_REQUEST
+  VIEW_AUDIT_LOG
+}
+
 model User {
   id           String        @id @default(cuid())
   login        String        @unique
@@ -28,7 +67,6 @@ model User {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   sessions     UserSession[]
-  auditLogs    AuditLog[]
 }
 
 model UserSession {
@@ -42,23 +80,31 @@ model UserSession {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  requestId  String
-  userId     String?
-  eventType  String
-  route      String
-  method     String
-  success    Boolean
-  statusCode Int
-  ipAddress  String?
-  metadata   Json?
-  createdAt  DateTime @default(now()) @db.Timestamptz(3)
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id               String         @id @default(uuid()) @db.Uuid
+  requestId        String         @db.Uuid
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  userId           String?
+  username         String?        @db.VarChar(100)
+  ipAddress        String?        @db.VarChar(64)
+  userAgent        String?        @db.VarChar(512)
+  eventType        AuditEventType
+  method           String         @db.VarChar(10)
+  route            String         @db.VarChar(255)
+  action           AuditAction
+  targetSystem     String         @db.VarChar(50)
+  statusCode       Int
+  success          Boolean
+  durationMs       Int
+  responseCount    Int?
+  errorCode        String?        @db.VarChar(100)
+  sessionReference String?        @db.Char(64)
+  metadata         Json?
 
   @@index([createdAt])
   @@index([userId])
   @@index([requestId])
   @@index([eventType])
+  @@index([action])
   @@index([route])
   @@index([success])
   @@index([ipAddress])

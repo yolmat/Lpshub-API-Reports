@@ -1,14 +1,107 @@
 const AUDIT_EVENTS = Object.freeze({
-    HTTP_REQUEST_COMPLETED: "HTTP_REQUEST_COMPLETED"
+    HTTP_REQUEST_COMPLETED: "HTTP_REQUEST_COMPLETED",
+    AUTH_LOGIN_SUCCESS: "AUTH_LOGIN_SUCCESS",
+    AUTH_LOGIN_FAILED: "AUTH_LOGIN_FAILED",
+    AUTH_LOGOUT: "AUTH_LOGOUT",
+    AUTH_SESSION_EXPIRED: "AUTH_SESSION_EXPIRED",
+    REPORT_EXECUTED: "REPORT_EXECUTED",
+    REPORT_EXPORTED: "REPORT_EXPORTED",
+    USER_CREATED: "USER_CREATED",
+    USER_UPDATED: "USER_UPDATED",
+    USER_DISABLED: "USER_DISABLED",
+    PERMISSION_CHANGED: "PERMISSION_CHANGED",
+    EXTERNAL_API_REQUEST: "EXTERNAL_API_REQUEST",
+    EXTERNAL_API_ERROR: "EXTERNAL_API_ERROR",
+    ACCESS_DENIED: "ACCESS_DENIED",
+    VALIDATION_FAILED: "VALIDATION_FAILED",
+    AUDIT_LOG_VIEWED: "AUDIT_LOG_VIEWED"
 });
 
+const AUDIT_ACTIONS = Object.freeze({
+    HTTP_REQUEST: "HTTP_REQUEST",
+    API_STATUS_CHECK: "API_STATUS_CHECK",
+    HEALTH_CHECK: "HEALTH_CHECK",
+    AUTHENTICATE: "AUTHENTICATE",
+    LOGOUT: "LOGOUT",
+    SESSION_EXPIRE: "SESSION_EXPIRE",
+    BANK_STATEMENT_SEARCH: "BANK_STATEMENT_SEARCH",
+    BRANCH_LIST: "BRANCH_LIST",
+    CREATE_USER: "CREATE_USER",
+    RESET_USER_PASSWORD: "RESET_USER_PASSWORD",
+    UPDATE_USER: "UPDATE_USER",
+    DISABLE_USER: "DISABLE_USER",
+    CHANGE_PERMISSION: "CHANGE_PERMISSION",
+    EXTERNAL_API_CALL: "EXTERNAL_API_CALL",
+    AUTHORIZE_ACCESS: "AUTHORIZE_ACCESS",
+    VALIDATE_REQUEST: "VALIDATE_REQUEST",
+    VIEW_AUDIT_LOG: "VIEW_AUDIT_LOG"
+});
+
+const AUDIT_TARGET_SYSTEMS = Object.freeze({
+    APPLICATION: "APPLICATION",
+    POSTGRESQL: "POSTGRESQL",
+    SAP_B1: "SAP_B1"
+});
+
+const RESPONSE_METADATA = ["responseSizeBytes"];
 const AUDIT_METADATA_ALLOW_LIST = Object.freeze({
-    [AUDIT_EVENTS.HTTP_REQUEST_COMPLETED]: Object.freeze([
-        "durationMs",
-        "errorCode",
-        "errorSource",
-        "statusCode"
-    ])
+    [AUDIT_EVENTS.HTTP_REQUEST_COMPLETED]: Object.freeze(RESPONSE_METADATA),
+    [AUDIT_EVENTS.AUTH_LOGIN_SUCCESS]: Object.freeze(RESPONSE_METADATA),
+    [AUDIT_EVENTS.AUTH_LOGIN_FAILED]: Object.freeze(["reason", ...RESPONSE_METADATA]),
+    [AUDIT_EVENTS.AUTH_LOGOUT]: Object.freeze(RESPONSE_METADATA),
+    [AUDIT_EVENTS.AUTH_SESSION_EXPIRED]: Object.freeze(["reason", ...RESPONSE_METADATA]),
+    [AUDIT_EVENTS.REPORT_EXECUTED]: Object.freeze([
+        "empresaCount",
+        "dateCount",
+        "dateStart",
+        "dateEnd",
+        ...RESPONSE_METADATA
+    ]),
+    [AUDIT_EVENTS.REPORT_EXPORTED]: Object.freeze(RESPONSE_METADATA),
+    [AUDIT_EVENTS.USER_CREATED]: Object.freeze([
+        "targetUserId",
+        "targetUsername",
+        ...RESPONSE_METADATA
+    ]),
+    [AUDIT_EVENTS.USER_UPDATED]: Object.freeze([
+        "targetUserId",
+        "targetUsername",
+        ...RESPONSE_METADATA
+    ]),
+    [AUDIT_EVENTS.USER_DISABLED]: Object.freeze([
+        "targetUserId",
+        "targetUsername",
+        ...RESPONSE_METADATA
+    ]),
+    [AUDIT_EVENTS.PERMISSION_CHANGED]: Object.freeze([
+        "targetUserId",
+        "permission",
+        ...RESPONSE_METADATA
+    ]),
+    [AUDIT_EVENTS.EXTERNAL_API_REQUEST]: Object.freeze([
+        "operation",
+        "empresaCount",
+        "dateCount",
+        "dateStart",
+        "dateEnd",
+        ...RESPONSE_METADATA
+    ]),
+    [AUDIT_EVENTS.EXTERNAL_API_ERROR]: Object.freeze([
+        "operation",
+        "empresaCount",
+        "dateCount",
+        "dateStart",
+        "dateEnd",
+        ...RESPONSE_METADATA
+    ]),
+    [AUDIT_EVENTS.ACCESS_DENIED]: Object.freeze(["reason", ...RESPONSE_METADATA]),
+    [AUDIT_EVENTS.VALIDATION_FAILED]: Object.freeze(["issueCount", ...RESPONSE_METADATA]),
+    [AUDIT_EVENTS.AUDIT_LOG_VIEWED]: Object.freeze(["filtersCount", ...RESPONSE_METADATA])
 });
 
-export { AUDIT_EVENTS, AUDIT_METADATA_ALLOW_LIST };
+export {
+    AUDIT_ACTIONS,
+    AUDIT_EVENTS,
+    AUDIT_METADATA_ALLOW_LIST,
+    AUDIT_TARGET_SYSTEMS
+};

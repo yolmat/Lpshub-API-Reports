@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { AUDITED_ROUTES } from "../config/auditRoutes.js";
 import { deactivateUser, login, logout, register, resetPassword } from "../controllers/authController.js";
 import { authenticate, requireAdmin } from "../middlewares/authMiddleware.js";
 import validateRequest from "../middlewares/validateRequestMiddleware.js";
@@ -15,15 +16,20 @@ import {
 function createAuthRoutes(rateLimiters) {
     const router = Router();
 
-    router.post("/auth/login", rateLimiters.login, validateRequest({ body: authLoginBodySchema }), login);
     router.post(
-        "/auth/logout",
+        AUDITED_ROUTES.AUTH_LOGIN.path,
+        rateLimiters.login,
+        validateRequest({ body: authLoginBodySchema }),
+        login
+    );
+    router.post(
+        AUDITED_ROUTES.AUTH_LOGOUT.path,
         validateRequest({ headers: protectedRouteHeadersSchema, body: authLogoutBodySchema }),
         authenticate,
         logout
     );
     router.post(
-        "/auth/register",
+        AUDITED_ROUTES.AUTH_REGISTER.path,
         rateLimiters.register,
         validateRequest({ headers: protectedRouteHeadersSchema, body: authRegisterBodySchema }),
         authenticate,
@@ -31,7 +37,7 @@ function createAuthRoutes(rateLimiters) {
         register
     );
     router.post(
-        "/auth/password-reset",
+        AUDITED_ROUTES.AUTH_PASSWORD_RESET.path,
         rateLimiters.passwordReset,
         validateRequest({ headers: protectedRouteHeadersSchema, body: authPasswordResetBodySchema }),
         authenticate,
@@ -39,7 +45,7 @@ function createAuthRoutes(rateLimiters) {
         resetPassword
     );
     router.post(
-        "/auth/deactivate",
+        AUDITED_ROUTES.AUTH_DEACTIVATE.path,
         validateRequest({ headers: protectedRouteHeadersSchema, body: authDeactivateUserBodySchema }),
         authenticate,
         requireAdmin,

@@ -4,10 +4,12 @@ import http from "node:http";
 import { Writable } from "node:stream";
 import test from "node:test";
 import { setTimeout as wait } from "node:timers/promises";
+import express from "express";
 
 import { createApp } from "../src/app.js";
+import { AUDITED_ROUTES, findAuditedRoute } from "../src/config/auditRoutes.js";
 import { createLogger, getLoggerOptions } from "../src/config/logger.js";
-import audit from "../src/middlewares/audit.js";
+import audit, { createAuditMiddleware } from "../src/middlewares/audit.js";
 import errorMiddleware from "../src/middlewares/errorMiddleware.js";
 import {
     getRequestContext,
@@ -15,18 +17,26 @@ import {
     updateRequestContext
 } from "../src/middlewares/requestContext.js";
 import prisma from "../src/repository/prisma.js";
-import { createAuditService, filterMetadata } from "../src/services/auditService.js";
+import {
+    createAuditService,
+    createSessionReference,
+    filterMetadata
+} from "../src/services/auditService.js";
 import AppError from "../src/utils/AppError.js";
-import { AUDIT_EVENTS } from "../src/utils/auditEvents.js";
+import {
+    AUDIT_ACTIONS,
+    AUDIT_EVENTS,
+    AUDIT_TARGET_SYSTEMS
+} from "../src/utils/auditEvents.js";
 
-async function request(app, path) {
+async function request(app, path, options) {
     const server = http.createServer(app);
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
 
     try {
         const { port } = server.address();
-        return await fetch(`http://127.0.0.1:${port}${path}`);
+        return await fetch(`http://127.0.0.1:${port}${path}`, options);
     } finally {
         server.close();
         await once(server, "close");
@@ -52,6 +62,42 @@ test("cria requestId UUID e preserva o contexto durante operações assíncronas
 
     assert.match(req.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
     assert.equal(headers.get("X-Request-ID"), req.id);
+});
+
+test("todas as rotas possuem AuditAction sem usar a ação genérica", () => {
+    const routes = Object.values(AUDITED_ROUTES);
+    const registeredEvents = [];
+    const service = {
+        getRequestEvent: () => null,
+        recordEvent: () => Promise.resolve(),
+        registerRequestEvent(event) {
+            registeredEvents.push(event);
+        }
+    };
+    const middleware = createAuditMiddleware(service);
+
+    assert.equal(routes.length, 9);
+    assert.equal(new Set(routes.map((route) => (
+        `${route.method} ${route.fullPath}`
+    ))).size, routes.length);
+
+    for (const route of routes) {
+        assert.notEqual(route.audit.action, AUDIT_ACTIONS.HTTP_REQUEST);
+        assert.equal(findAuditedRoute(route.method, route.fullPath), route);
+
+        middleware({
+            headers: {},
+            ip: "127.0.0.1",
+            method: route.method,
+            originalUrl: route.fullPath
+        }, {
+            end() {},
+            locals: {},
+            write() {}
+        }, () => {});
+
+        assert.deepEqual(registeredEvents.at(-1), route.audit);
+    }
 });
 
 test("remove credenciais e identificador de sessão dos logs estruturados", async () => {
@@ -95,17 +141,19 @@ test("usa pino-pretty somente para visualização fora de produção", () => {
 });
 
 test("auditoria aceita somente metadata primitivo presente na allow-list", async () => {
-    const metadata = filterMetadata(AUDIT_EVENTS.HTTP_REQUEST_COMPLETED, {
-        durationMs: 25.4,
-        errorCode: "INVALID_REQUEST",
+    const metadata = filterMetadata(AUDIT_EVENTS.REPORT_EXECUTED, {
+        empresaCount: 3,
+        dateStart: "2026-10-01",
+        responseSizeBytes: 1847,
         password: "não-pode-persistir",
         payload: { financeiro: "não-pode-persistir" },
-        statusCode: { valor: 400 }
+        dateCount: { valor: 4 }
     });
 
     assert.deepEqual(metadata, {
-        durationMs: 25.4,
-        errorCode: "INVALID_REQUEST"
+        empresaCount: 3,
+        dateStart: "2026-10-01",
+        responseSizeBytes: 1847
     });
 
     let persisted;
@@ -117,19 +165,25 @@ test("auditoria aceita somente metadata primitivo presente na allow-list", async
     });
 
     await service.recordEvent({
-        requestId: "request-1",
+        requestId: "8bd1278b-225f-4c41-8e8e-d223f31fa54a",
         eventType: AUDIT_EVENTS.HTTP_REQUEST_COMPLETED,
+        action: AUDIT_ACTIONS.HTTP_REQUEST,
+        targetSystem: AUDIT_TARGET_SYSTEMS.APPLICATION,
         route: "/health",
         method: "GET",
         success: true,
         statusCode: 200,
+        durationMs: 25.4,
         ipAddress: "127.0.0.1",
-        metadata: { statusCode: 200, cookie: "não-pode-persistir" }
+        sessionId: "sessao-nunca-persistida",
+        metadata: { responseSizeBytes: 200, cookie: "não-pode-persistir" }
     });
 
-    assert.deepEqual(persisted.metadata, { statusCode: 200 });
+    assert.deepEqual(persisted.metadata, { responseSizeBytes: 200 });
     assert.equal(persisted.createdAt.toISOString().endsWith("Z"), true);
     assert.equal("sessionId" in persisted, false);
+    assert.equal(persisted.sessionReference, createSessionReference("sessao-nunca-persistida"));
+    assert.equal(persisted.sessionReference.includes("sessao-nunca-persistida"), false);
 });
 
 test("classifica erros do SAP separadamente dos erros da aplicação", () => {
@@ -167,6 +221,55 @@ test("classifica erros do SAP separadamente dos erros da aplicação", () => {
     assert.equal(logs[0].errorCode, "SAP_TIMEOUT");
 });
 
+test("aguarda a auditoria nas rotas comuns e libera login sem aguardar", async () => {
+    let releaseReportAudit;
+    let releaseLoginAudit;
+    let reportAuditStarted = false;
+    const service = {
+        getRequestEvent: () => null,
+        recordEvent(event) {
+            if (event.route === "/api/v1/relatorio") {
+                reportAuditStarted = true;
+                return new Promise((resolve) => {
+                    releaseReportAudit = resolve;
+                });
+            }
+
+            return new Promise((resolve) => {
+                releaseLoginAudit = resolve;
+            });
+        }
+    };
+    const app = express();
+
+    app.use(requestContext);
+    app.use(createAuditMiddleware(service));
+    app.get("/api/v1/relatorio", (req, res) => res.json({ success: true }));
+    app.post("/api/v1/auth/login", (req, res) => res.json({ success: true }));
+
+    let reportFinished = false;
+    const reportRequest = request(app, "/api/v1/relatorio")
+        .then((response) => {
+            reportFinished = true;
+            return response;
+        });
+
+    for (let attempt = 0; attempt < 20 && !reportAuditStarted; attempt += 1) {
+        await wait(5);
+    }
+
+    assert.equal(reportAuditStarted, true);
+    assert.equal(reportFinished, false);
+    releaseReportAudit();
+    assert.equal((await reportRequest).status, 200);
+
+    const loginResponse = await request(app, "/api/v1/auth/login", { method: "POST" });
+
+    assert.equal(loginResponse.status, 200);
+    assert.equal(typeof releaseLoginAudit, "function");
+    releaseLoginAudit();
+});
+
 test("persiste o resultado HTTP usando o mesmo requestId retornado ao cliente", async () => {
     const app = createApp({
         isProduction: false,
@@ -189,8 +292,11 @@ test("persiste o resultado HTTP usando o mesmo requestId retornado ao cliente", 
         assert.match(requestId, /^[0-9a-f-]{36}$/i);
         assert.equal(auditLog?.eventType, AUDIT_EVENTS.HTTP_REQUEST_COMPLETED);
         assert.equal(auditLog?.route, "/health");
+        assert.equal(auditLog?.action, AUDIT_ACTIONS.HEALTH_CHECK);
+        assert.equal(auditLog?.targetSystem, AUDIT_TARGET_SYSTEMS.APPLICATION);
         assert.equal(auditLog?.success, true);
         assert.equal(auditLog?.statusCode, 200);
+        assert.equal(auditLog?.durationMs >= 0, true);
     } finally {
         await prisma.auditLog.deleteMany({ where: { requestId } });
     }

@@ -241,3 +241,31 @@ Datas de auditoria são persistidas em UTC. A conversão para `America/Sao_Paulo
 ### REG-044
 
 O campo `metadata` de auditoria aceita somente propriedades definidas na allow-list do tipo de evento e valores primitivos. Objetos completos recebidos do cliente não podem ser persistidos nesse campo.
+
+### REG-045
+
+Cada requisição produz um log operacional no Pino e um registro corporativo no `AuditLog`. O log operacional diagnostica a execução; a auditoria registra ator, ação semântica, origem, momento e resultado.
+
+### REG-046
+
+O `AuditLog` é append-only para a aplicação. O repository pode executar somente `INSERT`; atualização e exclusão pertencem exclusivamente a uma futura política administrativa de retenção.
+
+### REG-047
+
+Login bem-sucedido, falha de login, logout, expiração de sessão, acesso negado e falha de validação devem possuir eventos explícitos. Consultas de extrato usam a ação estável `BANK_STATEMENT_SEARCH`, independentemente do nome futuro da rota.
+
+### REG-048
+
+Request e response completos não são armazenados. A auditoria guarda somente contagens, tamanho da resposta e filtros resumidos definidos pela allow-list. O identificador de sessão é transformado em referência SHA-256 antes da persistência.
+
+### REG-049
+
+A resposta aguarda a persistência da auditoria, exceto nas rotas de login e logout. Nessas duas rotas, a gravação ocorre de forma assíncrona após a resposta ao cliente.
+
+### REG-050
+
+Uma futura consulta administrativa ao histórico deve registrar `AUDIT_LOG_VIEWED`. Nenhuma rota de leitura de auditoria está definida nesta etapa.
+
+### REG-051
+
+Toda rota deve possuir uma entrada em `AUDITED_ROUTES` com método, caminho, evento, `AuditAction` e sistema de destino. A rota deve utilizar o caminho dessa mesma definição. Não é permitido cadastrar uma rota funcional com a ação genérica `HTTP_REQUEST`.

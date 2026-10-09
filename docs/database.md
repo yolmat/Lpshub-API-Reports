@@ -58,11 +58,17 @@ O Prisma Client é gerado pelo provider `prisma-client-js`, compatível com a im
 
 ## 3.3 Model AuditLog
 
-O model `AuditLog` armazena o resultado técnico de requisições com `requestId`, usuário opcional, tipo do evento, rota, método, resultado, status HTTP, IP, `metadata` JSONB controlado e data de criação em `TIMESTAMPTZ` UTC.
+O model `AuditLog` mantém a trilha corporativa append-only. `id` e `requestId` usam UUID; `createdAt` usa `TIMESTAMPTZ` UTC. O registro contém snapshots opcionais de `userId` e `username`, IP, user agent, evento, ação, sistema de destino, método, rota, status, sucesso, duração, contagem de registros, código de erro, referência SHA-256 da sessão e `metadata` JSONB controlado.
 
-Existem índices para `createdAt`, `userId`, `requestId`, `eventType`, `route`, `success` e `ipAddress`. A exclusão de um usuário mantém o histórico e define `userId` como nulo.
+`AuditEventType` e `AuditAction` são enums fechados. Existem índices para `createdAt`, `userId`, `requestId`, `eventType`, `action`, `route`, `success` e `ipAddress`.
+
+As ações `API_STATUS_CHECK` e `HEALTH_CHECK` identificam explicitamente as rotas técnicas, evitando o uso de `HTTP_REQUEST` em rotas conhecidas.
+
+Não existe chave estrangeira entre `AuditLog.userId` e `User`. Essa decisão preserva o snapshot sem atualizações automáticas caso a conta de origem deixe de existir.
 
 A migration `20261009120000_add_audit_logs` cria a tabela, a chave estrangeira e os índices.
+A migration `20261009130000_expand_audit_logs` remove a relação mutável, preserva os registros existentes e adiciona os campos e enums da trilha corporativa.
+A migration `20261009140000_add_route_audit_actions` adiciona as ações das rotas técnicas ao enum `AuditAction`.
 
 Responsabilidades:
 

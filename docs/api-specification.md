@@ -141,6 +141,24 @@ A estrutura definitiva deve ser mantida consistente em toda a API.
 
 Todas as respostas incluem o header `X-Request-ID`, contendo o UUID gerado pela API para correlação entre cliente, logs operacionais e auditoria. O cliente não define esse identificador.
 
+A API não armazena bodies completos na auditoria. Para relatórios, são registrados somente a ação semântica, contagens dos filtros, quantidade de registros retornados, tamanho da resposta, duração, resultado e sistema de destino.
+
+## Ações de auditoria por rota
+
+| Método | Rota | AuditAction |
+| --- | --- | --- |
+| `GET` | `/api` | `API_STATUS_CHECK` |
+| `GET` | `/health` | `HEALTH_CHECK` |
+| `POST` | `/api/v1/auth/login` | `AUTHENTICATE` |
+| `POST` | `/api/v1/auth/logout` | `LOGOUT` |
+| `POST` | `/api/v1/auth/register` | `CREATE_USER` |
+| `POST` | `/api/v1/auth/password-reset` | `RESET_USER_PASSWORD` |
+| `POST` | `/api/v1/auth/deactivate` | `DISABLE_USER` |
+| `POST` | `/api/v1/extratos-bancarios` | `BANK_STATEMENT_SEARCH` |
+| `GET` | `/api/v1/filiais` | `BRANCH_LIST` |
+
+O middleware de auditoria é global e executa antes de HTTPS, rate limit, validação, autenticação e controllers. Portanto, todas as respostas dessas rotas, inclusive falhas antecipadas, produzem auditoria.
+
 ---
 
 # 7. Paginação

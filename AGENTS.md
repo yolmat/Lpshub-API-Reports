@@ -314,6 +314,25 @@ Routes não devem:
 - realizar processamento complexo;
 - acessar Prisma.
 
+### Regra obrigatória de auditoria para novas rotas
+
+Toda nova rota criada deve possuir obrigatoriamente uma ação semântica de auditoria no enum `AuditAction`.
+
+Ao criar uma rota:
+
+1. identificar a ação de negócio executada;
+2. verificar se já existe uma ação semanticamente equivalente em `AuditAction`;
+3. adicionar uma nova opção ao enum `AuditAction` quando não existir uma ação adequada;
+4. espelhar a ação na lista fechada `AUDIT_ACTIONS` da aplicação;
+5. cadastrar método, caminho, evento, ação e sistema em `AUDITED_ROUTES`;
+6. utilizar na definição da rota o caminho fornecido pela mesma entrada de `AUDITED_ROUTES`;
+7. registrar a ação no fluxo de auditoria da rota através do `auditService`;
+8. criar a migration correspondente quando o enum Prisma for alterado;
+9. adicionar testes que comprovem o evento e a ação persistidos;
+10. atualizar a documentação relacionada.
+
+Não criar uma rota sem `AuditAction`. Não reutilizar uma ação genérica apenas para evitar a criação da ação semântica correta.
+
 ---
 
 ## 5.6 services/
@@ -938,6 +957,7 @@ Antes de finalizar qualquer tarefa:
 - [ ] Nenhuma regra de negócio foi inventada.
 - [ ] Arquitetura respeitada.
 - [ ] Segurança considerada.
+- [ ] Toda nova rota possui uma ação semântica no enum `AuditAction` e registro no `auditService`.
 - [ ] Documentação revisada.
 - [ ] `/docs` atualizado quando necessário.
 - [ ] `CHANGELOG.md` atualizado quando a alteração for relevante.

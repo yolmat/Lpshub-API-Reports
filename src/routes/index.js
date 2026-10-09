@@ -1,4 +1,5 @@
 import express from "express";
+import { AUDITED_ROUTES } from "../config/auditRoutes.js";
 import createAuthRoutes from "./authRoutes.js";
 import extratosBancariosRoutes from "./extratosBancariosRoutes.js";
 import filiaisRoutes from "./filiaisRoutes.js";
@@ -6,7 +7,7 @@ import filiaisRoutes from "./filiaisRoutes.js";
 function createRoutes(rateLimiters) {
     const router = express.Router();
 
-    router.get("/", (req, res) => {
+    router.get(AUDITED_ROUTES.API_STATUS.path, (req, res) => {
         res.json({
             message: "API funcionando"
         });

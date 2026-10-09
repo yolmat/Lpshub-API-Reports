@@ -6,7 +6,13 @@ import {
 } from "../config/auth.js";
 import { randomUUID } from "node:crypto";
 import * as defaultUserRepository from "../repository/userRepository.js";
+import defaultAuditService from "./auditService.js";
 import AppError from "../utils/AppError.js";
+import {
+    AUDIT_ACTIONS,
+    AUDIT_EVENTS,
+    AUDIT_TARGET_SYSTEMS
+} from "../utils/auditEvents.js";
 import { createAuthToken } from "../utils/jwtUtils.js";
 import { hashPassword, verifyPassword } from "../utils/passwordUtils.js";
 
@@ -58,6 +64,7 @@ function toPublicUser(user) {
 
 function createAuthService({
     userRepository = defaultUserRepository,
+    auditService = defaultAuditService,
     getSecurityConfig = getAuthSecurityConfig,
     createSessionId = randomUUID,
     now = () => new Date()
@@ -90,6 +97,16 @@ function createAuthService({
                 role: "USER"
             });
 
+            auditService.registerRequestEvent({
+                eventType: AUDIT_EVENTS.USER_CREATED,
+                action: AUDIT_ACTIONS.CREATE_USER,
+                targetSystem: AUDIT_TARGET_SYSTEMS.POSTGRESQL,
+                metadata: {
+                    targetUserId: user.id,
+                    targetUsername: user.login
+                }
+            });
+
             return toPublicUser(user);
         } catch (error) {
             if (error.code === "P2002") {
@@ -113,6 +130,14 @@ function createAuthService({
             : false;
 
         if (!user || !user.status || !isValidPassword) {
+            auditService.registerRequestEvent({
+                eventType: AUDIT_EVENTS.AUTH_LOGIN_FAILED,
+                action: AUDIT_ACTIONS.AUTHENTICATE,
+                targetSystem: AUDIT_TARGET_SYSTEMS.APPLICATION,
+                username: userLogin,
+                errorCode: "INVALID_CREDENTIALS",
+                metadata: { reason: "INVALID_CREDENTIALS" }
+            });
             throw new AppError(
                 "Login ou senha inválidos.",
                 401,
@@ -134,6 +159,17 @@ function createAuthService({
             session.id
         );
 
+        auditService.setRequestActor({
+            userId: user.id,
+            username: user.login,
+            sessionId: session.id
+        });
+        auditService.registerRequestEvent({
+            eventType: AUDIT_EVENTS.AUTH_LOGIN_SUCCESS,
+            action: AUDIT_ACTIONS.AUTHENTICATE,
+            targetSystem: AUDIT_TARGET_SYSTEMS.APPLICATION
+        });
+
         return { token, user: toPublicUser(user) };
     }
 
@@ -153,6 +189,16 @@ function createAuthService({
         );
         const updatedUser = await userRepository.updateUserPassword(user.id, passwordHash);
 
+        auditService.registerRequestEvent({
+            eventType: AUDIT_EVENTS.USER_UPDATED,
+            action: AUDIT_ACTIONS.RESET_USER_PASSWORD,
+            targetSystem: AUDIT_TARGET_SYSTEMS.POSTGRESQL,
+            metadata: {
+                targetUserId: updatedUser.id,
+                targetUsername: updatedUser.login
+            }
+        });
+
         return toPublicUser(updatedUser);
     }
 
@@ -168,6 +214,11 @@ function createAuthService({
         }
 
         await userRepository.deleteUserSession(sessionId);
+        auditService.registerRequestEvent({
+            eventType: AUDIT_EVENTS.AUTH_LOGOUT,
+            action: AUDIT_ACTIONS.LOGOUT,
+            targetSystem: AUDIT_TARGET_SYSTEMS.POSTGRESQL
+        });
     }
 
     async function deactivateUser({ login }) {
@@ -178,6 +229,16 @@ function createAuthService({
         }
 
         const deactivatedUser = await userRepository.deactivateUserAndDeleteSessions(user.id);
+
+        auditService.registerRequestEvent({
+            eventType: AUDIT_EVENTS.USER_DISABLED,
+            action: AUDIT_ACTIONS.DISABLE_USER,
+            targetSystem: AUDIT_TARGET_SYSTEMS.POSTGRESQL,
+            metadata: {
+                targetUserId: deactivatedUser.id,
+                targetUsername: deactivatedUser.login
+            }
+        });
 
         return toPublicUser(deactivatedUser);
     }
@@ -192,8 +253,21 @@ function createAuthService({
             return null;
         }
 
+        auditService.setRequestActor({
+            userId: user.id,
+            username: user.login,
+            sessionId: session.id
+        });
+
         if (!user.status) {
             await userRepository.deleteUserSession(session.id);
+            auditService.registerRequestEvent({
+                eventType: AUDIT_EVENTS.ACCESS_DENIED,
+                action: AUDIT_ACTIONS.AUTHORIZE_ACCESS,
+                targetSystem: AUDIT_TARGET_SYSTEMS.APPLICATION,
+                errorCode: "USER_INACTIVE",
+                metadata: { reason: "USER_INACTIVE" }
+            });
             return null;
         }
 
@@ -206,6 +280,13 @@ function createAuthService({
             || sessionAgeMilliseconds >= AUTH_SESSION_ABSOLUTE_TIMEOUT_MS
         ) {
             await userRepository.deleteUserSession(session.id);
+            auditService.registerRequestEvent({
+                eventType: AUDIT_EVENTS.AUTH_SESSION_EXPIRED,
+                action: AUDIT_ACTIONS.SESSION_EXPIRE,
+                targetSystem: AUDIT_TARGET_SYSTEMS.POSTGRESQL,
+                errorCode: "SESSION_EXPIRED",
+                metadata: { reason: "SESSION_EXPIRED" }
+            });
             return null;
         }
 

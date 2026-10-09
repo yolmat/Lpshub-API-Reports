@@ -1,4 +1,61 @@
 import AppError from "../utils/AppError.js";
+import auditService from "../services/auditService.js";
+import {
+    AUDIT_ACTIONS,
+    AUDIT_EVENTS,
+    AUDIT_TARGET_SYSTEMS
+} from "../utils/auditEvents.js";
+
+function registerAuditError(error, code) {
+    const currentEvent = auditService.getRequestEvent();
+    let event = currentEvent ?? {
+        eventType: AUDIT_EVENTS.HTTP_REQUEST_COMPLETED,
+        action: AUDIT_ACTIONS.HTTP_REQUEST,
+        targetSystem: AUDIT_TARGET_SYSTEMS.APPLICATION
+    };
+
+    if (code.startsWith("SAP_")) {
+        event = {
+            ...event,
+            eventType: AUDIT_EVENTS.EXTERNAL_API_ERROR,
+            action: currentEvent?.action ?? AUDIT_ACTIONS.EXTERNAL_API_CALL,
+            targetSystem: AUDIT_TARGET_SYSTEMS.SAP_B1
+        };
+    } else if (
+        ["FORBIDDEN", "UNAUTHENTICATED"].includes(code)
+        && ![
+            AUDIT_EVENTS.AUTH_SESSION_EXPIRED,
+            AUDIT_EVENTS.ACCESS_DENIED
+        ].includes(currentEvent?.eventType)
+    ) {
+        event = {
+            ...event,
+            eventType: AUDIT_EVENTS.ACCESS_DENIED,
+            action: AUDIT_ACTIONS.AUTHORIZE_ACCESS,
+            targetSystem: AUDIT_TARGET_SYSTEMS.APPLICATION,
+            metadata: {
+                ...(event.metadata ?? {}),
+                reason: code
+            }
+        };
+    } else if (["INVALID_REQUEST", "INVALID_JSON"].includes(code)) {
+        event = {
+            ...event,
+            eventType: AUDIT_EVENTS.VALIDATION_FAILED,
+            action: AUDIT_ACTIONS.VALIDATE_REQUEST,
+            targetSystem: AUDIT_TARGET_SYSTEMS.APPLICATION,
+            metadata: {
+                ...(event.metadata ?? {}),
+                issueCount: Array.isArray(error.details) ? error.details.length : 1
+            }
+        };
+    }
+
+    auditService.registerRequestEvent({
+        ...event,
+        errorCode: currentEvent?.errorCode ?? code
+    });
+}
 
 function errorMiddleware(error, req, res, next) {
     if (res.headersSent) {
@@ -33,6 +90,7 @@ function errorMiddleware(error, req, res, next) {
 
     res.locals.errorCode = code;
     res.locals.errorSource = errorSource;
+    registerAuditError(error, code);
 
     const logData = {
         err: error,

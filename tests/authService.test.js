@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createAuthService } from "../src/services/authService.js";
+import { AUDIT_EVENTS } from "../src/utils/auditEvents.js";
 import { verifyAuthToken } from "../src/utils/jwtUtils.js";
 import { hashPassword, verifyPassword } from "../src/utils/passwordUtils.js";
 
@@ -82,6 +83,22 @@ function createUserRepository() {
     };
 }
 
+function createAuditServiceSpy() {
+    const actors = [];
+    const events = [];
+
+    return {
+        actors,
+        events,
+        registerRequestEvent(event) {
+            events.push(event);
+        },
+        setRequestActor(actor) {
+            actors.push(actor);
+        }
+    };
+}
+
 test("gera hash scrypt com salt aleatório e valida a senha", async () => {
     const firstHash = await hashPassword("senha-de-teste");
     const secondHash = await hashPassword("senha-de-teste");
@@ -137,9 +154,11 @@ test("registra usuário USER, autentica e redefine a senha padrão", async () =>
 
 test("mantém a sessão ativa com uso contínuo e invalida após duas horas de inatividade", async () => {
     const userRepository = createUserRepository();
+    const auditService = createAuditServiceSpy();
     let currentDate = new Date("2026-09-30T12:00:00.000Z");
     const service = createAuthService({
         userRepository,
+        auditService,
         getSecurityConfig: () => securityConfig,
         createSessionId: () => "sessao-de-teste",
         now: () => currentDate
@@ -166,6 +185,10 @@ test("mantém a sessão ativa com uso contínuo e invalida após duas horas de i
     currentDate = new Date("2026-09-30T17:29:00.000Z");
     assert.equal(await service.getAuthenticatedUser(user.id, sid), null);
     assert.equal(userRepository.getSession(sid), null);
+    assert.equal(
+        auditService.events.at(-1).eventType,
+        AUDIT_EVENTS.AUTH_SESSION_EXPIRED
+    );
 });
 
 test("invalida a sessão após oito horas mesmo com atividade recente", async () => {
@@ -277,4 +300,50 @@ test("desativa o usuário, encerra suas sessões e rejeita usuário inativo", as
     storedActiveUser.status = false;
     assert.equal(await service.getAuthenticatedUser(activeUser.id, activeSessionId), null);
     assert.equal(userRepository.getSession(activeSessionId), null);
+});
+
+test("registra eventos semânticos de login, falha e logout no authService", async () => {
+    const userRepository = createUserRepository();
+    const auditService = createAuditServiceSpy();
+    const service = createAuthService({
+        userRepository,
+        auditService,
+        getSecurityConfig: () => securityConfig,
+        createSessionId: () => "sessao-auditada"
+    });
+    const user = await service.registerUser({
+        login: "maudit",
+        email: "maudit@teste.com.br",
+        senha: "senha-inicial"
+    });
+    const { token } = await service.loginUser({
+        login: "maudit",
+        senha: "senha-inicial"
+    });
+    const { sid } = verifyAuthToken(token, securityConfig.jwtSecret);
+
+    await assert.rejects(
+        service.loginUser({ login: "maudit", senha: "senha-incorreta" }),
+        { code: "INVALID_CREDENTIALS" }
+    );
+    await service.logoutUser({
+        login: "maudit",
+        authenticatedUser: user,
+        sessionId: sid
+    });
+
+    assert.deepEqual(
+        auditService.events.map((event) => event.eventType),
+        [
+            AUDIT_EVENTS.USER_CREATED,
+            AUDIT_EVENTS.AUTH_LOGIN_SUCCESS,
+            AUDIT_EVENTS.AUTH_LOGIN_FAILED,
+            AUDIT_EVENTS.AUTH_LOGOUT
+        ]
+    );
+    assert.deepEqual(auditService.actors[0], {
+        userId: user.id,
+        username: "maudit",
+        sessionId: "sessao-auditada"
+    });
 });

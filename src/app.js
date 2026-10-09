@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 
+import { AUDITED_ROUTES } from "./config/auditRoutes.js";
 import { getHttpSecurityConfig } from "./config/env.js";
 import { createRateLimiters } from "./config/rateLimit.js";
 import createRoutes from "./routes/index.js";
@@ -76,7 +77,7 @@ function createApp(
 
     app.use("/api", createRoutes(rateLimiters));
 
-    app.get("/health", (req, res) => {
+    app.get(AUDITED_ROUTES.HEALTH.path, (req, res) => {
         res.status(200).json({
             status: "ok",
             message: "API online"

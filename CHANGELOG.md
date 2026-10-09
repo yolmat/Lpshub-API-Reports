@@ -3,6 +3,10 @@
 - Adicionado logging operacional estruturado com Pino e Pino HTTP, `requestId` UUID, contexto assíncrono, detecção de endpoints lentos e classificação de erros entre SAP e aplicação.
 - Adicionado `pino-pretty` para facilitar a leitura dos logs no ambiente de desenvolvimento, mantendo JSON em produção.
 - Adicionada fundação de auditoria em PostgreSQL com metadata JSONB controlado, redaction de dados sensíveis e índices de investigação.
+- Expandido o `AuditLog` com UUID, ator, user agent, ação semântica, sistema de destino, duração, contagem de resposta, erro e referência SHA-256 da sessão.
+- Adicionados eventos explícitos para autenticação, logout, expiração, usuários, relatórios, falhas externas, acesso negado, validação e futura consulta da própria auditoria.
+- Definida auditoria append-only e espera pela persistência em todas as rotas, exceto login e logout.
+- Vinculadas todas as rotas existentes ao catálogo obrigatório de `AuditAction`, incluindo `API_STATUS_CHECK` e `HEALTH_CHECK` para as rotas técnicas.
 - Adicionada desativação administrativa de usuário com remoção transacional de todas as sessões.
 - Adicionada rota de logout que exclui a sessão autenticada e remove o cookie do navegador.
 - Adicionado timeout absoluto de oito horas para sessões, independente da atividade do usuário.

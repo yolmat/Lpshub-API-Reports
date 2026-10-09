@@ -339,4 +339,12 @@ O Pino produz JSON em UTC, registra duração e status HTTP e classifica respost
 
 A origem de erros com código iniciado por `SAP_` é classificada como `sap`; as demais falhas são classificadas como `application`.
 
-A persistência de auditoria segue `middleware → auditService → auditRepository → Prisma`. O service aplica a allow-list de metadata antes de chamar o repository.
+A persistência de auditoria segue `requestContext → pino-http → audit → auditService → auditRepository → Prisma`. Os services registram o significado da operação, enquanto o middleware completa os dados HTTP e persiste exatamente um evento por requisição.
+
+O middleware aguarda o `INSERT` de auditoria antes de concluir a resposta. Login e logout são as únicas exceções: nessas rotas a resposta é liberada e a persistência continua de forma assíncrona. Uma falha de persistência gera um erro operacional no Pino sem registrar o conteúdo da requisição ou da resposta.
+
+Eventos e ações pertencem a listas fechadas. A rota é mantida para diagnóstico, mas a consulta histórica deve usar principalmente `eventType` e `action`, que permanecem estáveis mesmo quando o contrato HTTP evolui.
+
+O catálogo `src/config/auditRoutes.js` vincula método, caminho, evento, `AuditAction` e sistema de destino. As definições das rotas reutilizam os caminhos desse catálogo, e o middleware global resolve a ação antes de HTTPS, rate limit, Zod, autenticação e controller. Dessa forma, respostas antecipadas também permanecem dentro do processo de auditoria.
+
+O repository de auditoria expõe somente criação. Não existem operações de atualização ou exclusão na aplicação; uma futura política de retenção deve utilizar uma credencial administrativa separada.
