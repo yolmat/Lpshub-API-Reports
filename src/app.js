@@ -5,7 +5,10 @@ import helmet from "helmet";
 import { getHttpSecurityConfig } from "./config/env.js";
 import { createRateLimiters } from "./config/rateLimit.js";
 import createRoutes from "./routes/index.js";
+import audit from "./middlewares/audit.js";
 import errorMiddleware from "./middlewares/errorMiddleware.js";
+import { requestContext } from "./middlewares/requestContext.js";
+import { requestLogger } from "./middlewares/requestLogger.js";
 import validateRequest from "./middlewares/validateRequestMiddleware.js";
 import { emptyObjectSchema } from "./validations/requestSchemas.js";
 
@@ -26,12 +29,24 @@ function requireHttps(req, res, next) {
     });
 }
 
-function createApp(httpSecurityConfig = getHttpSecurityConfig()) {
+function skipAudit(req, res, next) {
+    return next();
+}
+
+function createApp(
+    httpSecurityConfig = getHttpSecurityConfig(),
+    { auditMiddleware } = {}
+) {
     const app = express();
     const rateLimiters = createRateLimiters();
+    const selectedAuditMiddleware = auditMiddleware
+        ?? (process.env.NODE_TEST_CONTEXT ? skipAudit : audit);
 
     app.disable("x-powered-by");
     app.set("trust proxy", httpSecurityConfig.trustProxy);
+    app.use(requestContext);
+    app.use(requestLogger);
+    app.use(selectedAuditMiddleware);
     app.use(helmet());
     app.use(cors({
         credentials: true,

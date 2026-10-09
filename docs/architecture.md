@@ -312,3 +312,31 @@ Bodies, queries e params devem possuir schema explícito. Headers também são
 validados quando participam da regra da rota, como o cookie nas operações
 administrativas. Os dados validados ficam em `req.validated`; controllers não
 devem usar dados brutos para executar a regra de negócio.
+
+---
+
+# 15. Observabilidade e contexto de requisição
+
+Toda requisição recebe um `requestId` gerado internamente com `crypto.randomUUID()` antes dos demais middlewares. O mesmo identificador é retornado no header `X-Request-ID` e acompanha os logs operacionais e os registros de auditoria.
+
+O `AsyncLocalStorage` mantém `requestId`, `userId`, `sessionId` e `ip` disponíveis durante a cadeia assíncrona. O `sessionId` permanece apenas no contexto interno e nunca é incluído automaticamente em logs ou registros de auditoria.
+
+O fluxo transversal ocorre nesta ordem:
+
+```text
+requestContext
+   ↓
+requestLogger (Pino HTTP)
+   ↓
+audit
+   ↓
+middlewares funcionais
+   ↓
+controller → service → repository / integration
+```
+
+O Pino produz JSON em UTC, registra duração e status HTTP e classifica respostas `4xx` como `warn` e respostas `5xx` como `error`. Em desenvolvimento, o transport `pino-pretty` formata a saída para leitura local em uma worker thread. Em produção e nos testes automatizados, a saída permanece em JSON sem esse transport. Requisições com duração igual ou superior a 1 segundo geram também o evento operacional `HTTP_SLOW_REQUEST`.
+
+A origem de erros com código iniciado por `SAP_` é classificada como `sap`; as demais falhas são classificadas como `application`.
+
+A persistência de auditoria segue `middleware → auditService → auditRepository → Prisma`. O service aplica a allow-list de metadata antes de chamar o repository.

@@ -29,6 +29,26 @@ function errorMiddleware(error, req, res, next) {
             : isAppError
                 ? error.message
                 : "Ocorreu um erro interno ao processar a solicitação.";
+    const errorSource = code.startsWith("SAP_") ? "sap" : "application";
+
+    res.locals.errorCode = code;
+    res.locals.errorSource = errorSource;
+
+    const logData = {
+        err: error,
+        event: "HTTP_REQUEST_ERROR",
+        errorCode: code,
+        errorSource,
+        method: req.method,
+        route: req.path,
+        statusCode
+    };
+
+    if (statusCode >= 500) {
+        req.log?.error(logData, "Erro ao processar a requisição.");
+    } else {
+        req.log?.warn(logData, "Requisição rejeitada.");
+    }
 
     const errorResponse = {
         success: false,

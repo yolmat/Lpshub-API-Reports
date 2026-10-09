@@ -1,5 +1,8 @@
 ## Não publicado
 
+- Adicionado logging operacional estruturado com Pino e Pino HTTP, `requestId` UUID, contexto assíncrono, detecção de endpoints lentos e classificação de erros entre SAP e aplicação.
+- Adicionado `pino-pretty` para facilitar a leitura dos logs no ambiente de desenvolvimento, mantendo JSON em produção.
+- Adicionada fundação de auditoria em PostgreSQL com metadata JSONB controlado, redaction de dados sensíveis e índices de investigação.
 - Adicionada desativação administrativa de usuário com remoção transacional de todas as sessões.
 - Adicionada rota de logout que exclui a sessão autenticada e remove o cookie do navegador.
 - Adicionado timeout absoluto de oito horas para sessões, independente da atividade do usuário.

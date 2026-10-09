@@ -217,3 +217,27 @@ Todas as rotas aceitam até 50 requisições por minuto por IP. Login e cadastro
 aceitam até 15 requisições por minuto cada um. A redefinição de senha aceita até
 5 requisições por minuto. Quando um limite é excedido, a API retorna `429
 RATE_LIMIT_EXCEEDED`.
+
+---
+
+# 13. Logs operacionais e auditoria
+
+### REG-040
+
+Toda requisição deve receber um `requestId` UUID gerado pela API. Identificadores fornecidos pelo cliente não substituem o valor interno.
+
+### REG-041
+
+Logs nunca devem registrar senha, cookie, header de autorização, tokens, Session ID, credenciais SAP, API keys, connection strings, secrets ou payload financeiro completo.
+
+### REG-042
+
+O IP deve ser obtido por `req.ip`. Headers encaminhados somente serão considerados quando `TRUST_PROXY` declarar exatamente a quantidade de proxies confiáveis entre o cliente e a API.
+
+### REG-043
+
+Datas de auditoria são persistidas em UTC. A conversão para `America/Sao_Paulo` pertence à camada de apresentação.
+
+### REG-044
+
+O campo `metadata` de auditoria aceita somente propriedades definidas na allow-list do tipo de evento e valores primitivos. Objetos completos recebidos do cliente não podem ser persistidos nesse campo.

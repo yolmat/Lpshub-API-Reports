@@ -139,6 +139,8 @@ Exemplo de erro:
 
 A estrutura definitiva deve ser mantida consistente em toda a API.
 
+Todas as respostas incluem o header `X-Request-ID`, contendo o UUID gerado pela API para correlação entre cliente, logs operacionais e auditoria. O cliente não define esse identificador.
+
 ---
 
 # 7. Paginação

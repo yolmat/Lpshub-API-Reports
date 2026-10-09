@@ -56,6 +56,14 @@ A desativação de usuário atualiza `User.status` e exclui as sessões vinculad
 
 O Prisma Client é gerado pelo provider `prisma-client-js`, compatível com a importação de `@prisma/client` utilizada pelos repositories.
 
+## 3.3 Model AuditLog
+
+O model `AuditLog` armazena o resultado técnico de requisições com `requestId`, usuário opcional, tipo do evento, rota, método, resultado, status HTTP, IP, `metadata` JSONB controlado e data de criação em `TIMESTAMPTZ` UTC.
+
+Existem índices para `createdAt`, `userId`, `requestId`, `eventType`, `route`, `success` e `ipAddress`. A exclusão de um usuário mantém o histórico e define `userId` como nulo.
+
+A migration `20261009120000_add_audit_logs` cria a tabela, a chave estrangeira e os índices.
+
 Responsabilidades:
 
 - modelagem;

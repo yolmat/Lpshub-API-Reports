@@ -6,6 +6,7 @@ import {
 import authService from "../services/authService.js";
 import AppError from "../utils/AppError.js";
 import { verifyAuthToken } from "../utils/jwtUtils.js";
+import { updateRequestContext } from "./requestContext.js";
 
 function getCookieValue(cookieHeader, name) {
     if (!cookieHeader) {
@@ -53,6 +54,10 @@ async function authenticate(req, res, next) {
 
         req.authenticatedUser = user;
         req.authenticatedSessionId = payload.sid;
+        updateRequestContext({
+            userId: user.id,
+            sessionId: payload.sid
+        });
         return next();
     } catch (error) {
         return next(error);
