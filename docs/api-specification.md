@@ -159,6 +159,8 @@ A API não armazena bodies completos na auditoria. Para relatórios, são regist
 
 O middleware de auditoria é global e executa antes de HTTPS, rate limit, validação, autenticação e controllers. Portanto, todas as respostas dessas rotas, inclusive falhas antecipadas, produzem auditoria.
 
+Com exceção de `POST /api/v1/auth/login` e `GET /api`, todas as rotas exigem o cookie `lpshub_access_token` e executam o middleware `authenticate` após a validação da requisição.
+
 ---
 
 # 7. Paginação
@@ -307,7 +309,7 @@ Retorna os lançamentos bancários do SAP filtrados por conta e período.
 
 ### Autenticação
 
-Não definida nesta versão.
+Obrigatória. Envie o cookie de autenticação `lpshub_access_token` emitido no login.
 
 ### Request body
 
@@ -389,7 +391,7 @@ Retorna todas as filiais consultadas no SAP Business One Service Layer.
 
 ### Autenticação
 
-Não definida nesta versão.
+Obrigatória. Envie o cookie de autenticação `lpshub_access_token` emitido no login.
 
 ### Query Parameters
 

@@ -1,5 +1,6 @@
 ## Não publicado
 
+- Corrigida a proteção das rotas de extratos bancários, filiais e saúde para propagar usuário e sessão ao `AuditLog`; somente login e `GET /api` permanecem públicos.
 - Adicionado logging operacional estruturado com Pino e Pino HTTP, `requestId` UUID, contexto assíncrono, detecção de endpoints lentos e classificação de erros entre SAP e aplicação.
 - Adicionado `pino-pretty` para facilitar a leitura dos logs no ambiente de desenvolvimento, mantendo JSON em produção.
 - Adicionada fundação de auditoria em PostgreSQL com metadata JSONB controlado, redaction de dados sensíveis e índices de investigação.

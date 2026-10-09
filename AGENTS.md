@@ -333,6 +333,17 @@ Ao criar uma rota:
 
 Não criar uma rota sem `AuditAction`. Não reutilizar uma ação genérica apenas para evitar a criação da ação semântica correta.
 
+### Regra obrigatória de autenticação para rotas
+
+Toda rota deve executar o middleware `authenticate`, após as validações Zod necessárias e antes do controller.
+
+As únicas exceções permitidas são:
+
+1. `POST /api/v1/auth/login`, pois é a rota que inicia a autenticação;
+2. `GET /api`, usado como verificação pública de disponibilidade da API.
+
+Ao criar ou alterar uma rota, verificar explicitamente se ela aplica `authenticate`. Não criar exceções adicionais sem uma regra de negócio documentada e aprovada.
+
 ---
 
 ## 5.6 services/

@@ -7,11 +7,15 @@ import { getHttpSecurityConfig } from "./config/env.js";
 import { createRateLimiters } from "./config/rateLimit.js";
 import createRoutes from "./routes/index.js";
 import audit from "./middlewares/audit.js";
+import { authenticate } from "./middlewares/authMiddleware.js";
 import errorMiddleware from "./middlewares/errorMiddleware.js";
 import { requestContext } from "./middlewares/requestContext.js";
 import { requestLogger } from "./middlewares/requestLogger.js";
 import validateRequest from "./middlewares/validateRequestMiddleware.js";
-import { emptyObjectSchema } from "./validations/requestSchemas.js";
+import {
+    emptyObjectSchema,
+    protectedRouteHeadersSchema
+} from "./validations/requestSchemas.js";
 
 const EXTRATOS_BANCARIOS_BODY_LIMIT = "10kb";
 const AUTH_BODY_LIMIT = "2kb";
@@ -77,12 +81,17 @@ function createApp(
 
     app.use("/api", createRoutes(rateLimiters));
 
-    app.get(AUDITED_ROUTES.HEALTH.path, (req, res) => {
-        res.status(200).json({
-            status: "ok",
-            message: "API online"
-        });
-    });
+    app.get(
+        AUDITED_ROUTES.HEALTH.path,
+        validateRequest({ headers: protectedRouteHeadersSchema }),
+        authenticate,
+        (req, res) => {
+            res.status(200).json({
+                status: "ok",
+                message: "API online"
+            });
+        }
+    );
 
     app.use(errorMiddleware);
 

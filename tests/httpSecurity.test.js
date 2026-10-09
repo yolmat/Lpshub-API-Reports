@@ -66,13 +66,19 @@ test("adiciona cabeçalhos de segurança e libera CORS apenas para origem autori
         trustProxy: false
     });
     const authorizedResponse = await request(app, "/health", {
-        headers: { Origin: "https://app.exemplo.com" }
+        headers: {
+            Origin: "https://app.exemplo.com",
+            cookie: `${AUTH_COOKIE_NAME}=token-inválido`
+        }
     });
     const unauthorizedResponse = await request(app, "/health", {
-        headers: { Origin: "https://origem-nao-autorizada.exemplo.com" }
+        headers: {
+            Origin: "https://origem-nao-autorizada.exemplo.com",
+            cookie: `${AUTH_COOKIE_NAME}=token-inválido`
+        }
     });
 
-    assert.equal(authorizedResponse.status, 200);
+    assert.equal(authorizedResponse.status, 401);
     assert.equal(authorizedResponse.headers.get("access-control-allow-origin"), "https://app.exemplo.com");
     assert.equal(authorizedResponse.headers.get("access-control-allow-credentials"), "true");
     assert.equal(authorizedResponse.headers.get("x-content-type-options"), "nosniff");
@@ -88,7 +94,7 @@ test("exige HTTPS em produção e aceita HTTPS sinalizado por proxy confiável",
         trustProxy: 1
     });
     const insecureResponse = await request(app, "/health");
-    const proxiedHttpsResponse = await request(app, "/health", {
+    const proxiedHttpsResponse = await request(app, "/api", {
         headers: { "x-forwarded-proto": "https" }
     });
 
@@ -111,6 +117,62 @@ test("rejeita body maior que o limite da rota de extratos bancários", async () 
 
     assert.equal(response.status, 413);
     assert.equal((await response.json()).error.code, "PAYLOAD_TOO_LARGE");
+});
+
+test("exige autenticação em todas as rotas, exceto login e API", async () => {
+    const app = createApp({
+        isProduction: false,
+        allowedCorsOrigins: [],
+        trustProxy: false
+    });
+    const invalidCookie = `${AUTH_COOKIE_NAME}=token-inválido`;
+    const protectedRequests = [
+        ["/health", { headers: { cookie: invalidCookie } }],
+        ["/api/v1/filiais", { headers: { cookie: invalidCookie } }],
+        ["/api/v1/extratos-bancarios", {
+            method: "POST",
+            headers: { cookie: invalidCookie, "content-type": "application/json" },
+            body: JSON.stringify({
+                empresa: ["LPSI"],
+                dataInicial: "2026-10-01",
+                dataFinal: "2026-10-01"
+            })
+        }],
+        ["/api/v1/auth/logout", {
+            method: "POST",
+            headers: { cookie: invalidCookie, "content-type": "application/json" },
+            body: JSON.stringify({ login: "msaraiva" })
+        }],
+        ["/api/v1/auth/register", {
+            method: "POST",
+            headers: { cookie: invalidCookie, "content-type": "application/json" },
+            body: JSON.stringify({ login: "novo", email: "novo@teste.com", senha: "senha" })
+        }],
+        ["/api/v1/auth/password-reset", {
+            method: "POST",
+            headers: { cookie: invalidCookie, "content-type": "application/json" },
+            body: JSON.stringify({ login: "novo", email: "novo@teste.com" })
+        }],
+        ["/api/v1/auth/deactivate", {
+            method: "POST",
+            headers: { cookie: invalidCookie, "content-type": "application/json" },
+            body: JSON.stringify({ login: "novo" })
+        }]
+    ];
+
+    for (const [path, options] of protectedRequests) {
+        const response = await request(app, path, options);
+
+        assert.equal(response.status, 401, path);
+        assert.equal((await response.json()).error.code, "UNAUTHENTICATED", path);
+    }
+
+    assert.equal((await request(app, "/api")).status, 200);
+    assert.equal((await request(app, "/api/v1/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({})
+    })).status, 400);
 });
 
 test("retorna os detalhes do Zod ao receber uma requisição inválida", async () => {
@@ -139,11 +201,11 @@ test("aplica o limite global de 50 requisições por minuto", async () => {
     });
 
     for (let index = 0; index < GLOBAL_RATE_LIMIT; index += 1) {
-        const response = await request(app, "/health");
+        const response = await request(app, "/api");
         assert.equal(response.status, 200);
     }
 
-    const blockedResponse = await request(app, "/health");
+    const blockedResponse = await request(app, "/api");
     assert.equal(blockedResponse.status, 429);
     assert.equal((await blockedResponse.json()).error.code, "RATE_LIMIT_EXCEEDED");
 });

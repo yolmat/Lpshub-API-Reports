@@ -276,7 +276,9 @@ test("persiste o resultado HTTP usando o mesmo requestId retornado ao cliente", 
         allowedCorsOrigins: [],
         trustProxy: false
     }, { auditMiddleware: audit });
-    const response = await request(app, "/health");
+    const response = await request(app, "/health", {
+        headers: { cookie: "lpshub_access_token=token-inválido" }
+    });
     const requestId = response.headers.get("x-request-id");
     let auditLog;
 
@@ -290,14 +292,47 @@ test("persiste o resultado HTTP usando o mesmo requestId retornado ao cliente", 
 
     try {
         assert.match(requestId, /^[0-9a-f-]{36}$/i);
-        assert.equal(auditLog?.eventType, AUDIT_EVENTS.HTTP_REQUEST_COMPLETED);
+        assert.equal(auditLog?.eventType, AUDIT_EVENTS.ACCESS_DENIED);
         assert.equal(auditLog?.route, "/health");
-        assert.equal(auditLog?.action, AUDIT_ACTIONS.HEALTH_CHECK);
+        assert.equal(auditLog?.action, AUDIT_ACTIONS.AUTHORIZE_ACCESS);
         assert.equal(auditLog?.targetSystem, AUDIT_TARGET_SYSTEMS.APPLICATION);
-        assert.equal(auditLog?.success, true);
-        assert.equal(auditLog?.statusCode, 200);
+        assert.equal(auditLog?.success, false);
+        assert.equal(auditLog?.statusCode, 401);
         assert.equal(auditLog?.durationMs >= 0, true);
     } finally {
         await prisma.auditLog.deleteMany({ where: { requestId } });
     }
+});
+
+test("persiste o ator autenticado e a referência da sessão em relatórios", async () => {
+    const persistedEvents = [];
+    const service = createAuditService({
+        createAuditLog(event) {
+            persistedEvents.push(event);
+            return Promise.resolve(event);
+        }
+    });
+    const app = express();
+
+    app.use(requestContext);
+    app.use(createAuditMiddleware(service));
+    app.use((req, res, next) => {
+        req.authenticatedUser = { id: "usuario-123", login: "msaraiva" };
+        service.setRequestActor({
+            userId: req.authenticatedUser.id,
+            username: req.authenticatedUser.login,
+            sessionId: "sessao-123"
+        });
+        next();
+    });
+    app.get("/api/v1/filiais", (req, res) => res.status(200).json({ data: [] }));
+
+    const response = await request(app, "/api/v1/filiais");
+    const auditEvent = persistedEvents.at(-1);
+
+    assert.equal(response.status, 200);
+    assert.equal(auditEvent.userId, "usuario-123");
+    assert.equal(auditEvent.username, "msaraiva");
+    assert.equal(auditEvent.sessionReference, createSessionReference("sessao-123"));
+    assert.equal(auditEvent.action, AUDIT_ACTIONS.BRANCH_LIST);
 });
