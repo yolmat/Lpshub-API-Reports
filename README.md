@@ -4,7 +4,7 @@
 
 > Dados do SAP Business One para relatórios, dashboards e BI, com acesso autenticado e rastreabilidade.
 
-[Sobre](#sobre-o-projeto) · [Funcionalidades](#funcionalidades) · [Tecnologias](#tecnologias-utilizadas) · [Iniciar projeto](#iniciar-projeto) · [Como usar](#como-usar) · [Contribuir](#como-contribuir)
+[Sobre](#sobre-o-projeto) · [Funcionalidades](#funcionalidades) · [Tecnologias](#tecnologias-utilizadas) · [Iniciar projeto](#iniciar-projeto) · [Como usar](#como-usar)
 
 ## Sobre o projeto
 
