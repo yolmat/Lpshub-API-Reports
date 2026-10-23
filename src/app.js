@@ -18,6 +18,7 @@ import {
 } from "./validations/requestSchemas.js";
 
 const EXTRATOS_BANCARIOS_BODY_LIMIT = "10kb";
+const FBL5N_BODY_LIMIT = "25kb";
 const AUTH_BODY_LIMIT = "2kb";
 
 function requireHttps(req, res, next) {
@@ -72,6 +73,7 @@ function createApp(
         "/api/v1/extratos-bancarios",
         express.json({ limit: EXTRATOS_BANCARIOS_BODY_LIMIT })
     );
+    app.use("/api/v1/fbl5n", express.json({ limit: FBL5N_BODY_LIMIT }));
     app.use("/api/v1/auth", express.json({ limit: AUTH_BODY_LIMIT }));
 
     app.use(validateRequest({

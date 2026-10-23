@@ -10,7 +10,7 @@
 
 O **LPSHUB API Reports** é uma API backend que consulta o **SAP Business One Service Layer** e disponibiliza informações para aplicações web, relatórios financeiros e ferramentas de BI. Centraliza a integração SAP, a autenticação dos consumidores e o registro das operações realizadas.
 
-Atualmente, oferece consultas de **extratos bancários e filiais**, verificação de conectividade SAP e administração de usuários. A integração reúne automaticamente as páginas devolvidas pelo SAP e mantém suas credenciais no servidor. O PostgreSQL armazena usuários, sessões e auditoria; os dados dos relatórios são consultados no SAP.
+Atualmente, oferece consultas de **extratos bancários, filiais e FBL5N**, verificação de conectividade SAP e administração de usuários. A integração reúne automaticamente as páginas devolvidas pelo SAP e mantém suas credenciais no servidor. O PostgreSQL armazena usuários, sessões e auditoria; os dados dos relatórios são consultados no SAP.
 
 ## Funcionalidades
 
@@ -41,6 +41,7 @@ Atualmente, oferece consultas de **extratos bancários e filiais**, verificaçã
 | `POST` | `/api/v1/auth/deactivate`     | ADM         | Desativa a conta identificada por login, remove suas sessões e retorna seus dados públicos. |
 | `GET`  | `/api/v1/filiais`             | Autenticado | Retorna as filiais do SAP, reunindo todas as páginas.                                       |
 | `POST` | `/api/v1/extratos-bancarios`  | Autenticado | Retorna os lançamentos bancários do SAP correspondentes aos filtros.                        |
+| `POST` | `/api/v1/fbl5n`              | Autenticado | Reúne os sete blocos do relatório FBL5N com os filtros informados.                          |
 | `GET`  | `/api/v1/service-layer`       | Autenticado | Verifica login/logout SAP e retorna `Service Layer funcionando`.                            |
 
 Contratos completos: [especificação da API](docs/api-specification.md) e [guia de rotas](documentação.md#rotas).
@@ -56,7 +57,6 @@ Contratos completos: [especificação da API](docs/api-specification.md) e [guia
 - **Limites por IP:** 50 requisições/minuto globalmente; limites adicionais de 15 para login e cadastro e 5 para redefinição de senha. Excesso retorna `429`.
 - **Dados sensíveis:** remoção de campos sensíveis conhecidos nas respostas SAP, filtragem de logs e metadados de auditoria controlados.
 
-> **Divergência documental:** o `AGENTS.md` menciona bcrypt, mas a implementação e a regra REG-021 em `docs/business-rules.md` utilizam `scrypt`. Este README descreve o comportamento implementado.
 
 ### Auditoria das rotas
 
@@ -133,7 +133,7 @@ docs/               # Arquitetura, contratos, regras, banco, integrações e dec
 - **Node.js e npm**. A documentação registra uso de Node.js 24; o projeto ainda não fixa uma versão em `engines`.
 - **Git** para clonar o repositório.
 - **Docker com Compose** para iniciar o PostgreSQL local, ou uma instância PostgreSQL acessível.
-- Acesso de rede e credenciais do **SAP Business One Service Layer**. A consulta de filiais depende da SQLQuery `LpsHub-GetDadosFiliais` disponível no SAP.
+- Acesso de rede e credenciais do **SAP Business One Service Layer**. A consulta de filiais depende da SQLQuery `LpsHub-GetDadosFiliais`; a FBL5N depende das sete SQLQueries com filtro de cliente e das sete cópias com sufixo `_BASE` para consultas sem cliente, cadastradas no SAP. `npm run fbl5n:sqlqueries` gera os textos de referência.
 
 ## Iniciar projeto
 
@@ -167,7 +167,7 @@ Preencha os valores de [.env.example](.env.example) no `.env` local. Nunca versi
 | `SAP_SERVICE_LAYER_COMPANY_DB` | Banco da empresa no SAP.                                                                                                                                |
 | `SAP_SERVICE_LAYER_USERNAME`   | Usuário técnico SAP.                                                                                                                                    |
 | `SAP_SERVICE_LAYER_PASSWORD`   | Senha do usuário técnico SAP.                                                                                                                           |
-| `SAP_SERVICE_LAYER_TIMEOUT_MS` | Timeout por chamada SAP. O exemplo define `30000`; o fallback do código é `300000` ms.                                                                  |
+| `SAP_SERVICE_LAYER_TIMEOUT_MS` | Timeout por chamada SAP. O exemplo e o fallback do código definem `1800000` ms (30 minutos).                                                    |
 | `FULL_TEST_ADMIN_LOGIN`        | Login do administrador local preparado por `fullTest`.                                                                                                  |
 | `FULL_TEST_ADMIN_EMAIL`        | Email desse administrador.                                                                                                                              |
 | `FULL_TEST_ADMIN_PASSWORD`     | Senha desse administrador; obrigatória apenas para `fullTest`, assim como login e email.                                                                |

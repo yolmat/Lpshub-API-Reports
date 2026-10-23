@@ -556,7 +556,6 @@ O salt faz senhas iguais produzirem resultados armazenados diferentes. Na verifi
 
 A validação de senha atual exige texto não vazio. Não há uma política implementada de tamanho mínimo maior, complexidade, histórico ou troca obrigatória após reset. A resposta genérica do login evita informar diretamente se a conta existe, mas não representa uma garantia de igualdade de tempo entre todos os cenários.
 
-> O `AGENTS.md` ainda menciona bcrypt. A escolha posterior definida para a autenticação foi `crypto.scrypt`, registrada em `docs/business-rules.md` (REG-021) e implementada em `passwordUtils.js`. Esta documentação explica essa escolha efetiva; não declara bcrypt como dependência existente.
 
 ### 6.4 Cookie
 

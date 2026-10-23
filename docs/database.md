@@ -73,6 +73,7 @@ A migration `20261009130000_expand_audit_logs` remove a relação mutável, pres
 A migration `20261009140000_add_route_audit_actions` adiciona as ações das rotas técnicas ao enum `AuditAction`.
 A migration `20261009160000_add_current_user_audit_action` adiciona o evento e a ação usados pela consulta do usuário autenticado.
 A migration `20261009170000_add_service_layer_connection_audit_action` adiciona o evento e a ação da verificação de conectividade do Service Layer.
+A migration `20261019120000_add_fbl5n_audit_action` adiciona `FBL5N_SEARCH` ao enum de ações para o novo relatório. O relatório não cria tabelas auxiliares no PostgreSQL.
 
 Responsabilidades:
 

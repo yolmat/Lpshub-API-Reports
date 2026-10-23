@@ -76,7 +76,7 @@ test("todas as rotas possuem AuditAction sem usar a ação genérica", () => {
     };
     const middleware = createAuditMiddleware(service);
 
-    assert.equal(routes.length, 12);
+    assert.equal(routes.length, 13);
     assert.equal(new Set(routes.map((route) => (
         `${route.method} ${route.fullPath}`
     ))).size, routes.length);
@@ -98,6 +98,34 @@ test("todas as rotas possuem AuditAction sem usar a ação genérica", () => {
 
         assert.deepEqual(registeredEvents.at(-1), route.audit);
     }
+});
+
+test("persiste evento e ação semântica da consulta FBL5N", async () => {
+    const persisted = [];
+    const service = createAuditService({
+        createAuditLog(event) {
+            persisted.push(event);
+            return Promise.resolve(event);
+        }
+    });
+    const app = express();
+
+    app.use(requestContext);
+    app.use(createAuditMiddleware(service));
+    app.post(AUDITED_ROUTES.FBL5N.fullPath, (req, res) => res.json({
+        success: true,
+        data: []
+    }));
+
+    const response = await request(app, AUDITED_ROUTES.FBL5N.fullPath, {
+        method: "POST"
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(persisted.length, 1);
+    assert.equal(persisted[0].eventType, AUDIT_EVENTS.REPORT_EXECUTED);
+    assert.equal(persisted[0].action, AUDIT_ACTIONS.FBL5N_SEARCH);
+    assert.equal(persisted[0].targetSystem, AUDIT_TARGET_SYSTEMS.SAP_B1);
 });
 
 test("remove credenciais e identificador de sessão dos logs estruturados", async () => {

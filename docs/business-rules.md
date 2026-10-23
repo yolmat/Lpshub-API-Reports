@@ -281,3 +281,7 @@ Toda rota deve possuir uma entrada em `AUDITED_ROUTES` com método, caminho, eve
 ### REG-052
 
 A verificação autenticada do Service Layer abre uma sessão SAP para confirmar conectividade e credenciais, encerra essa sessão em `finally` e não consulta nem retorna dados externos.
+
+### REG-053
+
+Na FBL5N, todos os filtros são opcionais. Quando informados, filial, cliente, data de lançamento (`RefDate`) e data de vencimento (`DueDate`) devem ser aplicados nas sete SQLQueries do SAP antes da paginação e do retorno à API. A API não deve produzir o resultado por filtragem local dos registros recebidos; ela deve rejeitar uma resposta do SAP que contenha registros fora dos filtros solicitados.

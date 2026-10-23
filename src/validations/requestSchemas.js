@@ -101,6 +101,51 @@ const extratoBancarioBodySchema = z.object({
     }
 });
 
+const fbl5nDateSchema = z.string().refine(
+    isValidIsoDate,
+    "A data deve estar no formato AAAA-MM-DD."
+);
+const fbl5nClientSchema = z.string().regex(
+    /^(CPF|CPJ)\d{6}$/,
+    "O código do cliente deve conter CPF ou CPJ seguido de seis dígitos."
+);
+
+const fbl5nBodySchema = z.object({
+    BPLId: z.array(z.number().int().nonnegative()).default([]),
+    CardCode: z.array(z.string().trim().min(1)).default([]),
+    RefDate: z.array(fbl5nDateSchema).default([]),
+    DueDate: z.array(fbl5nDateSchema).default([]),
+    RefDateInicial: fbl5nDateSchema.optional(),
+    RefDateFinal: fbl5nDateSchema.optional(),
+    DueDateInicial: fbl5nDateSchema.optional(),
+    DueDateFinal: fbl5nDateSchema.optional(),
+    clienteInicial: fbl5nClientSchema.optional(),
+    clienteFinal: fbl5nClientSchema.optional()
+}).strict().superRefine((value, context) => {
+    for (const [initial, final] of [
+        ["RefDateInicial", "RefDateFinal"],
+        ["DueDateInicial", "DueDateFinal"],
+        ["clienteInicial", "clienteFinal"]
+    ]) {
+        if (value[initial] && value[final] && value[initial] > value[final]) {
+            context.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: [final],
+                message: "O limite final deve ser maior ou igual ao inicial."
+            });
+        }
+    }
+
+    if (value.clienteInicial && value.clienteFinal
+        && value.clienteInicial.slice(0, 3) !== value.clienteFinal.slice(0, 3)) {
+        context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["clienteFinal"],
+            message: "Os limites de cliente devem pertencer à mesma família."
+        });
+    }
+});
+
 export {
     authDeactivateUserBodySchema,
     authLoginBodySchema,
@@ -108,5 +153,6 @@ export {
     authRegisterBodySchema,
     emptyObjectSchema,
     extratoBancarioBodySchema,
+    fbl5nBodySchema,
     protectedRouteHeadersSchema
 };

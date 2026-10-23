@@ -44,7 +44,7 @@ A aplicação utiliza:
 - PostgreSQL
 - Prisma ORM
 - JWT
-- bcrypt
+- crypto.scrypt
 
 ### JavaScript
 
@@ -472,7 +472,7 @@ Nunca alterar o banco de produção manualmente sem identificar o impacto da alt
 
 A autenticação da API utiliza JWT.
 
-Senhas devem ser protegidas utilizando bcrypt.
+Senhas devem ser protegidas utilizando `crypto.scrypt` com salt aleatório exclusivo por senha.
 
 Nunca:
 

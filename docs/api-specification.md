@@ -157,6 +157,7 @@ A API não armazena bodies completos na auditoria. Para relatórios, são regist
 | `POST` | `/api/v1/auth/password-reset` | `RESET_USER_PASSWORD` |
 | `POST` | `/api/v1/auth/deactivate` | `DISABLE_USER` |
 | `POST` | `/api/v1/extratos-bancarios` | `BANK_STATEMENT_SEARCH` |
+| `POST` | `/api/v1/fbl5n` | `FBL5N_SEARCH` |
 | `GET` | `/api/v1/filiais` | `BRANCH_LIST` |
 | `GET` | `/api/v1/service-layer` | `CHECK_SERVICE_LAYER_CONNECTION` |
 
@@ -451,3 +452,29 @@ Status: `200`
 
 - `500 SAP_CONFIGURATION_ERROR`: configuração do SAP incompleta;
 - `502 SAP_CONNECTION_ERROR`, `SAP_TIMEOUT` ou `SAP_REQUEST_ERROR`: falha de comunicação, autenticação ou encerramento de sessão no SAP.
+
+---
+
+# 15. Relatório FBL5N
+
+## POST /api/v1/fbl5n
+
+Consulta os sete blocos do relatório FBL5N no SAP e retorna os registros com os nomes de coluna do SQL original. Exige o cookie `lpshub_access_token` e executa validação Zod antes da autenticação.
+
+O body JSON aceita até 25 KB (25.600 bytes). Acima desse limite, a API retorna `413 PAYLOAD_TOO_LARGE`.
+
+O body aceita `BPLId` (array de inteiros), `CardCode` (array de códigos), `RefDate` e `DueDate` (arrays de datas `AAAA-MM-DD`), `RefDateInicial`, `RefDateFinal`, `DueDateInicial`, `DueDateFinal`, `clienteInicial` e `clienteFinal`. Os limites de cliente usam `CPF` ou `CPJ` seguidos de seis dígitos. Todos os campos são opcionais; arrays omitidos são tratados como vazios. Quando um intervalo é informado, ele prevalece sobre o array da mesma data. Campos desconhecidos, datas inválidas e intervalos invertidos retornam `400 INVALID_REQUEST`.
+
+Os filtros informados são executados nas SQLQueries do Service Layer antes do retorno dos registros à API. `RefDate` corresponde a Dt Lançamento e `DueDate` a Dt Vencimento. A faixa de cliente prevalece sobre `CardCode`. A API verifica o resultado do SAP e responde `502 SAP_RESPONSE_ERROR` se ele incluir registros fora dos filtros.
+
+Quando `CardCode` contém mais de 25 códigos distintos, a API envia lotes de até 25 às sete SQLQueries do SAP, um lote após o outro, e reúne os resultados sem remover linhas duplicadas do relatório.
+
+```json
+{
+  "BPLId": [1, 2],
+  "RefDateInicial": "2026-10-01",
+  "RefDateFinal": "2026-10-31"
+}
+```
+
+O sucesso retorna `200` com `{ "success": true, "data": [...] }`. O SAP pode gerar `500 SAP_CONFIGURATION_ERROR` ou `502` com os códigos `SAP_REQUEST_ERROR`, `SAP_CONNECTION_ERROR`, `SAP_TIMEOUT`, `SAP_RESPONSE_ERROR` e `SAP_PAGINATION_ERROR`. A API preserva as linhas duplicadas produzidas pelo SQL e ordena por `NºDoc`.

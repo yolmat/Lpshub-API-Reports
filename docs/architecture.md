@@ -103,7 +103,7 @@ Importações locais devem declarar explicitamente a extensão `.js`.
 
 A configuração HTTP é aplicada na criação da aplicação, antes das rotas. Ela desativa o cabeçalho `X-Powered-By`, usa Helmet para cabeçalhos de segurança e restringe CORS às origens declaradas em `CORS_ALLOWED_ORIGINS`.
 
-O parser JSON é aplicado aos caminhos `/api/v1/extratos-bancarios`, com limite de 10 KB, e `/api/v1/auth`, com limite de 2 KB. As demais rotas não fazem parsing de body.
+O parser JSON é aplicado aos caminhos `/api/v1/extratos-bancarios`, com limite de 10 KB, `/api/v1/fbl5n`, com limite de 25 KB, e `/api/v1/auth`, com limite de 2 KB. As demais rotas não fazem parsing de body.
 
 Em produção, requisições precisam chegar por HTTPS. Quando o TLS termina em proxy reverso, `TRUST_PROXY` deve conter a quantidade de proxies confiáveis para que o Express avalie corretamente `X-Forwarded-Proto`.
 

@@ -136,6 +136,35 @@ test("rejeita body maior que o limite da rota de extratos bancários", async () 
     assert.equal((await response.json()).error.code, "PAYLOAD_TOO_LARGE");
 });
 
+test("aceita body FBL5N com mil clientes e rejeita acima de 25 KB", async () => {
+    const app = createApp({
+        isProduction: false,
+        allowedCorsOrigins: [],
+        trustProxy: false
+    });
+    const cardCodes = Array.from(
+        { length: 1000 },
+        (_, index) => `CPJ${String(index + 1).padStart(6, "0")}`
+    );
+    const acceptedResponse = await request(app, "/api/v1/fbl5n", {
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+            cookie: `${AUTH_COOKIE_NAME}=token-inválido`
+        },
+        body: JSON.stringify({ CardCode: cardCodes })
+    });
+    const oversizedResponse = await request(app, "/api/v1/fbl5n", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ CardCode: ["CPJ000001"], extra: "x".repeat(26 * 1024) })
+    });
+
+    assert.equal(acceptedResponse.status, 401);
+    assert.equal(oversizedResponse.status, 413);
+    assert.equal((await oversizedResponse.json()).error.code, "PAYLOAD_TOO_LARGE");
+});
+
 test("exige autenticação em todas as rotas, exceto login e API", async () => {
     const app = createApp({
         isProduction: false,
@@ -155,6 +184,11 @@ test("exige autenticação em todas as rotas, exceto login e API", async () => {
                 dataInicial: "2026-10-01",
                 dataFinal: "2026-10-01"
             })
+        }],
+        ["/api/v1/fbl5n", {
+            method: "POST",
+            headers: { cookie: invalidCookie, "content-type": "application/json" },
+            body: JSON.stringify({ BPLId: [1] })
         }],
         ["/api/v1/auth/logout", {
             method: "POST",

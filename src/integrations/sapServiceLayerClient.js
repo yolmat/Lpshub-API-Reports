@@ -1,7 +1,13 @@
 import { sapServiceLayerConfig } from "../config/env.js";
+import logger from "../config/logger.js";
+import { QUERY_CODES as FBL5N_QUERY_CODES } from "./fbl5nSqlQueries.js";
 import AppError from "../utils/AppError.js";
 
 const SAP_API_PATH = "/b1s/v1/";
+const FBL5N_QUERY_PAGE_SIZE = 1000;
+const FBL5N_QUERY_CONCURRENCY = 10;
+const FBL5N_TOTAL_TIMEOUT_MS = 1800000;
+const FBL5N_LOGOUT_RESERVE_MS = 10000;
 const SENSITIVE_SAP_FIELDS = new Set([
     "accesstoken",
     "apikey",
@@ -87,13 +93,20 @@ async function parseResponse(response) {
 }
 
 async function requestSap(url, options = {}) {
-    const { timeoutMs } = getConfig();
+    const { timeoutMs: configuredTimeoutMs } = getConfig();
+    const {
+        requestTimeoutMs = configuredTimeoutMs,
+        ...fetchOptions
+    } = options;
     const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+    const timeoutId = setTimeout(
+        () => abortController.abort(),
+        requestTimeoutMs
+    );
 
     try {
         const response = await fetch(url, {
-            ...options,
+            ...fetchOptions,
             signal: abortController.signal
         });
         const body = await parseResponse(response);
@@ -125,12 +138,13 @@ async function requestSap(url, options = {}) {
     }
 }
 
-async function login() {
+async function login(requestTimeoutMs) {
     const { url, login: credentials } = getConfig();
     const loginUrl = new URL("Login", getApiBaseUrl(url));
     const { response, body } = await requestSap(loginUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        requestTimeoutMs,
         body: JSON.stringify({
             CompanyDB: credentials.companyDb,
             UserName: credentials.userName,
@@ -141,13 +155,14 @@ async function login() {
     return getCookieHeader(response, body);
 }
 
-async function logout(cookie) {
+async function logout(cookie, requestTimeoutMs) {
     const { url } = getConfig();
     const logoutUrl = new URL("Logout", getApiBaseUrl(url));
 
     await requestSap(logoutUrl, {
         method: "POST",
-        headers: { Cookie: cookie }
+        headers: { Cookie: cookie },
+        requestTimeoutMs
     });
 }
 
@@ -201,6 +216,269 @@ async function getAllPages(initialPageUrl, cookie, resourceName) {
     }
 
     return records;
+}
+
+function formatSqlQueryParameter(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return String(value);
+    }
+
+    if (typeof value === "string") {
+        return `'${value.replaceAll("'", "''")}'`;
+    }
+
+    throw new TypeError("Parâmetro de SQLQuery inválido.");
+}
+
+function createSqlQueryParamList(parameters) {
+    return Object.entries(parameters)
+        .map(([name, value]) => `${name}=${formatSqlQueryParameter(value)}`)
+        .join("&");
+}
+
+function getRemainingTime(deadline) {
+    const remainingTime = deadline - Date.now();
+
+    if (remainingTime <= 0) {
+        throw new AppError(
+            "A geração da FBL5N excedeu o tempo limite.",
+            502,
+            "SAP_TIMEOUT"
+        );
+    }
+
+    return remainingTime;
+}
+
+async function getAllSqlQueryPages(queryCode, parameters, cookie, deadline) {
+    const { url } = getConfig();
+    const records = [];
+    const visitedUrls = new Set();
+    let pageUrl = new URL(
+        `SQLQueries('${queryCode}')/List`,
+        getApiBaseUrl(url)
+    );
+    let isFirstPage = true;
+    let pageNumber = 0;
+
+    while (pageUrl) {
+        if (visitedUrls.has(pageUrl.href)) {
+            throw new AppError(
+                "O SAP retornou uma paginação repetida.",
+                502,
+                "SAP_PAGINATION_ERROR"
+            );
+        }
+
+        visitedUrls.add(pageUrl.href);
+        pageNumber += 1;
+        const pageStartedAt = performance.now();
+        logger.info({
+            event: "FBL5N_SQLQUERY_PAGE_STARTED",
+            queryCode,
+            pageNumber
+        }, "Página da SQLQuery FBL5N iniciada.");
+        const requestOptions = {
+            method: isFirstPage ? "POST" : "GET",
+            requestTimeoutMs: getRemainingTime(deadline),
+            headers: {
+                Cookie: cookie,
+                Prefer: `odata.maxpagesize=${FBL5N_QUERY_PAGE_SIZE}`
+            }
+        };
+
+        if (isFirstPage) {
+            requestOptions.headers["Content-Type"] = "application/json";
+            requestOptions.body = JSON.stringify({
+                ParamList: createSqlQueryParamList(parameters)
+            });
+        }
+
+        let body;
+
+        try {
+            ({ body } = await requestSap(pageUrl, requestOptions));
+        } catch (error) {
+            logger.warn({
+                event: "FBL5N_SQLQUERY_PAGE_FAILED",
+                queryCode,
+                pageNumber,
+                durationMs: Math.round(performance.now() - pageStartedAt),
+                errorCode: error.code ?? "INTERNAL_ERROR"
+            }, "Falha na página da SQLQuery FBL5N.");
+            throw error;
+        }
+
+        if (!body || !Array.isArray(body.value)) {
+            throw new AppError(
+                `O SAP retornou uma resposta inválida para ${queryCode}.`,
+                502,
+                "SAP_RESPONSE_ERROR"
+            );
+        }
+
+        records.push(...sanitizeSapData(body.value));
+        logger.info({
+            event: "FBL5N_SQLQUERY_PAGE_COMPLETED",
+            queryCode,
+            pageNumber,
+            durationMs: Math.round(performance.now() - pageStartedAt),
+            rowCount: body.value.length
+        }, "Página da SQLQuery FBL5N concluída.");
+        pageUrl = body["odata.nextLink"]
+            ? getNextPageUrl(body["odata.nextLink"], url)
+            : null;
+        isFirstPage = false;
+    }
+
+    return records;
+}
+
+async function mapWithConcurrency(items, concurrency, operation) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+    let firstError;
+
+    async function worker() {
+        while (nextIndex < items.length && !firstError) {
+            const currentIndex = nextIndex;
+            nextIndex += 1;
+            try {
+                results[currentIndex] = await operation(
+                    items[currentIndex],
+                    currentIndex
+                );
+            } catch (error) {
+                firstError ??= error;
+            }
+        }
+    }
+
+    const workerCount = Math.min(concurrency, items.length);
+    await Promise.all(Array.from({ length: workerCount }, worker));
+
+    if (firstError) {
+        throw firstError;
+    }
+
+    return results;
+}
+
+async function getFbl5nBlocks(parameters) {
+    const parameterSets = Array.isArray(parameters) ? parameters : [parameters];
+    const { timeoutMs } = getConfig();
+    const totalTimeoutMs = Math.max(
+        1,
+        Math.min(timeoutMs, FBL5N_TOTAL_TIMEOUT_MS) - FBL5N_LOGOUT_RESERVE_MS
+    );
+    const deadline = Date.now() + totalTimeoutMs;
+    const loginStartedAt = performance.now();
+    logger.info({ event: "FBL5N_SAP_LOGIN_STARTED" }, "Login SAP da FBL5N iniciado.");
+    let cookie;
+
+    try {
+        cookie = await login(getRemainingTime(deadline));
+        logger.info({
+            event: "FBL5N_SAP_LOGIN_COMPLETED",
+            durationMs: Math.round(performance.now() - loginStartedAt)
+        }, "Login SAP da FBL5N concluído.");
+    } catch (error) {
+        logger.warn({
+            event: "FBL5N_SAP_LOGIN_FAILED",
+            durationMs: Math.round(performance.now() - loginStartedAt),
+            errorCode: error.code ?? "INTERNAL_ERROR"
+        }, "Falha no login SAP da FBL5N.");
+        throw error;
+    }
+    let operationError;
+
+    try {
+        const results = [];
+
+        for (const [partitionIndex, queryParameters] of parameterSets.entries()) {
+            const partitionResults = await mapWithConcurrency(
+                FBL5N_QUERY_CODES,
+                FBL5N_QUERY_CONCURRENCY,
+                async (queryCode) => {
+                    const noClientFilter = queryParameters.clienteTodos === "%";
+                    const sapQueryCode = noClientFilter ? `${queryCode}_BASE` : queryCode;
+                    const sapParameters = Object.fromEntries(
+                        Object.entries(queryParameters).filter(([name]) => (
+                            name !== "clienteTodos"
+                                && (!noClientFilter || !name.startsWith("cliente"))
+                        ))
+                    );
+                    const startedAt = performance.now();
+                    logger.info({
+                        event: "FBL5N_SQLQUERY_STARTED",
+                        queryCode,
+                        partitionIndex
+                    }, "SQLQuery FBL5N iniciada.");
+                    let records;
+
+                    try {
+                        records = await getAllSqlQueryPages(
+                            sapQueryCode,
+                            sapParameters,
+                            cookie,
+                            deadline
+                        );
+                    } catch (error) {
+                        logger.warn({
+                            event: "FBL5N_SQLQUERY_FAILED",
+                            queryCode,
+                            partitionIndex,
+                            durationMs: Math.round(performance.now() - startedAt),
+                            errorCode: error.code ?? "INTERNAL_ERROR"
+                        }, "Falha na SQLQuery FBL5N.");
+                        throw error;
+                    }
+                    const durationMs = Math.round(performance.now() - startedAt);
+
+                    logger.info({
+                        event: "FBL5N_SQLQUERY_COMPLETED",
+                        queryCode,
+                        partitionIndex,
+                        durationMs,
+                        rowCount: records.length
+                    }, "Consulta FBL5N concluída.");
+
+                    return { queryCode, records, durationMs };
+                }
+            );
+            results.push(...partitionResults);
+        }
+        return FBL5N_QUERY_CODES.map((queryCode) => {
+            const parts = results.filter((part) => part.queryCode === queryCode);
+
+            return {
+                queryCode,
+                records: parts.flatMap((part) => part.records),
+                durationMs: parts.reduce((total, part) => total + part.durationMs, 0)
+            };
+        });
+    } catch (error) {
+        operationError = error;
+        throw error;
+    } finally {
+        const logoutStartedAt = performance.now();
+        try {
+            await logout(cookie, FBL5N_LOGOUT_RESERVE_MS);
+            logger.info({
+                event: "FBL5N_SAP_LOGOUT_COMPLETED",
+                durationMs: Math.round(performance.now() - logoutStartedAt)
+            }, "Logout SAP da FBL5N concluído.");
+        } catch (logoutError) {
+            logger.warn({
+                event: "FBL5N_SAP_LOGOUT_FAILED",
+                durationMs: Math.round(performance.now() - logoutStartedAt),
+                errorCode: logoutError.code ?? "INTERNAL_ERROR"
+            }, "Falha no logout SAP da FBL5N.");
+            if (!operationError) {
+                throw logoutError;
+            }
+        }
+    }
 }
 
 async function executeWithSapSession(operation) {
@@ -310,6 +588,8 @@ async function getExtratosBancarios({ empresas, dataInicial, dataFinal, datas })
 
 export {
     checkServiceLayerConnection,
+    FBL5N_QUERY_CODES,
     getAllFiliais,
-    getExtratosBancarios
+    getExtratosBancarios,
+    getFbl5nBlocks
 };

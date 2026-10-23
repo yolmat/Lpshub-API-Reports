@@ -101,6 +101,14 @@ const AUDITED_ROUTES = Object.freeze({
         action: AUDIT_ACTIONS.BANK_STATEMENT_SEARCH,
         targetSystem: AUDIT_TARGET_SYSTEMS.SAP_B1
     }),
+    FBL5N: defineRoute({
+        method: "POST",
+        path: "/fbl5n",
+        fullPath: "/api/v1/fbl5n",
+        eventType: AUDIT_EVENTS.REPORT_EXECUTED,
+        action: AUDIT_ACTIONS.FBL5N_SEARCH,
+        targetSystem: AUDIT_TARGET_SYSTEMS.SAP_B1
+    }),
     BRANCHES: defineRoute({
         method: "GET",
         path: "/filiais",

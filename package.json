@@ -10,7 +10,8 @@
     "fullTest": "node scripts/fullTest.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "fbl5n:sqlqueries": "node scripts/generateFbl5nSqlQueries.js"
   },
   "keywords": [],
   "author": "",

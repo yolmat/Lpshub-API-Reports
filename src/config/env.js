@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config({ quiet: true });
 
 const getEnvValue = (name) => process.env[name]?.trim();
-const DEFAULT_SAP_SERVICE_LAYER_TIMEOUT_MS = 300000;
+const DEFAULT_SAP_SERVICE_LAYER_TIMEOUT_MS = 1800000;
 
 const getTimeout = () => {
     const timeout = Number.parseInt(

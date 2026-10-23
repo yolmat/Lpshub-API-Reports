@@ -1,5 +1,19 @@
 ## Não publicado
 
+- Agrupados até 25 códigos de cliente por SQLQuery FBL5N com `IN` no SAP; lotes são executados em sequência e preservam as faixas e a multiplicidade do relatório.
+
+- Elevado de 10 KB para 25 KB o limite do body da rota FBL5N.
+
+- Elevada de três para dez a concorrência de SQLQueries SAP por requisição FBL5N.
+
+- Movidos os filtros de filial, cliente, lançamento e vencimento para SQLQueries do SAP. Arrays são divididos em partições exatas no Service Layer; a API reúne os resultados sem filtrar linhas e rejeita respostas fora dos filtros. As sete consultas com cliente foram atualizadas e verificadas no SAP após comparação com as originais; sete cópias `_BASE` preservam o caminho sem cliente.
+
+- Ampliado o timeout SAP para 30 minutos e instrumentadas as etapas da FBL5N para identificar lentidão no login, em cada SQLQuery/página e no processamento da API.
+
+- Corrigida a consolidação da FBL5N quando as SQLQueries SAP retornam campos intermediários: a API agora projeta as colunas antes dos filtros e rejeita formatos incompletos.
+
+- Preparada a consulta FBL5N em sete SQLQueries parametrizadas derivadas do SQL original, com rota autenticada, auditoria semântica, paginação SAP, concorrência controlada e métricas de execução.
+
 - Reescrito o README com visão geral, funcionalidades, rotas, auditoria, segurança, banco, arquitetura, configuração, inicialização, exemplos e contribuição; explicitadas as limitações atuais de instalação e consulta da auditoria.
 
 - Adicionado o guia `documentação.md` com inicialização, dependências, contratos das rotas, segurança, variáveis de ambiente, estrutura de pastas, banco e decisões de desenvolvimento; revisadas divergências na documentação de autenticação, parsing JSON e timeout SAP.

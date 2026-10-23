@@ -7,6 +7,7 @@ import {
     authRegisterBodySchema,
     emptyObjectSchema,
     extratoBancarioBodySchema,
+    fbl5nBodySchema,
     protectedRouteHeadersSchema
 } from "../src/validations/requestSchemas.js";
 
@@ -93,4 +94,29 @@ test("rejeita body na rota de logout", async () => {
     assert.equal(error.code, "INVALID_REQUEST");
     assert.equal(error.details[0].location, "body");
     assert.equal(error.details[0].path, "login");
+});
+
+test("valida os filtros parametrizados do FBL5N", async () => {
+    const valid = await validate({ body: fbl5nBodySchema }, {
+        body: {
+            BPLId: [1, 3],
+            CardCode: ["CPF000123"],
+            RefDate: ["2026-10-01"],
+            DueDateInicial: "2026-10-01",
+            DueDateFinal: "2026-10-31"
+        }
+    });
+    const invalid = await validate({ body: fbl5nBodySchema }, {
+        body: {
+            BPLId: [1],
+            RefDateInicial: "2026-10-31",
+            RefDateFinal: "2026-10-01",
+            campoInesperado: true
+        }
+    });
+
+    assert.equal(valid.error, undefined);
+    assert.deepEqual(valid.validated.body.DueDate, []);
+    assert.equal(invalid.error.code, "INVALID_REQUEST");
+    assert.deepEqual(invalid.error.details.map(({ path }) => path), ["campoInesperado", "RefDateFinal"]);
 });
