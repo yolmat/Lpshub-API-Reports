@@ -1,5 +1,7 @@
 ## Não publicado
 
+- Declarada a versão Node.js 26.12.0 em `engines` e no lockfile.
+
 - Agrupados até 25 códigos de cliente por SQLQuery FBL5N com `IN` no SAP; lotes são executados em sequência e preservam as faixas e a multiplicidade do relatório.
 
 - Elevado de 10 KB para 25 KB o limite do body da rota FBL5N.

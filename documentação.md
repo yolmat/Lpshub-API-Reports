@@ -53,7 +53,7 @@ As regras completas estão em [AGENTS.md](AGENTS.md). Os documentos especializad
 - Docker com Compose, caso utilize o banco fornecido pelo repositório.
 - Credenciais e acesso de rede ao SAP para executar as rotas de integração.
 
-O `package.json` não fixa uma versão de Node em `engines`. O ambiente usado no desenvolvimento desta documentação executa Node.js 24; isso não define, por si só, uma matriz completa de compatibilidade.
+O `package.json` declara Node.js 26.12.0 em `engines`, correspondente à versão usada no desenvolvimento.
 
 Execute os comandos abaixo na raiz do projeto, onde está o `package.json`.
 

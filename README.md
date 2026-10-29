@@ -130,7 +130,7 @@ docs/               # Arquitetura, contratos, regras, banco, integrações e dec
 
 ## Pré-requisitos
 
-- **Node.js e npm**. A documentação registra uso de Node.js 24; o projeto ainda não fixa uma versão em `engines`.
+- **Node.js 26.12.0 e npm**. A versão do Node está declarada em `engines` no `package.json`.
 - **Git** para clonar o repositório.
 - **Docker com Compose** para iniciar o PostgreSQL local, ou uma instância PostgreSQL acessível.
 - Acesso de rede e credenciais do **SAP Business One Service Layer**. A consulta de filiais depende da SQLQuery `LpsHub-GetDadosFiliais`; a FBL5N depende das sete SQLQueries com filtro de cliente e das sete cópias com sufixo `_BASE` para consultas sem cliente, cadastradas no SAP. `npm run fbl5n:sqlqueries` gera os textos de referência.
